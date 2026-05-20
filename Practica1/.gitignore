@@ -1,0 +1,15 @@
+# Entornos virtuales
+venv/
+env/
+
+# Base de datos local
+*.db
+*.sqlite3
+
+# Secretos (¡CRÍTICO!)
+.env
+config/config.py  # Si contiene llaves reales
+
+# Python
+__pycache__/
+*.py[cod]

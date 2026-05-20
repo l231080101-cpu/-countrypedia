@@ -1,0 +1,25 @@
+services:
+  backend:
+    build: ./backend
+    container_name: practica1-backend
+    ports:
+      - "8080:55000"
+    environment:
+      - PORT=55000
+      - HOST=0.0.0.0
+      - API_KEY=${API_KEY}
+      - SECRET_KEY=${SECRET_KEY}
+      - DB_NAME=geocultural.db
+      - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}
+    volumes:
+      - ./backend/geocultural.db:/app/geocultural.db
+    restart: always
+
+  frontend:
+    image: nginx:alpine
+    container_name: practica1-frontend
+    ports:
+      - "80:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html
+    restart: always
