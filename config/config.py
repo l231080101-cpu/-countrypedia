@@ -1,7 +1,6 @@
+import os
 # Permite usar una base de datos remota (Postgres) o local (SQLite)
 DATABASE_URL = os.getenv('DATABASE_URL', '')
-import os
-
 PORT = int(os.getenv('PORT', 55000))
 HOST = os.getenv('HOST', '0.0.0.0')
 SECRET_KEY = os.getenv('SECRET_KEY', 'clave_por_defecto_solo_para_desarrollo')
