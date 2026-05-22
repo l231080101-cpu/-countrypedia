@@ -1,0 +1,23 @@
+services:
+  backend:
+    build: ./backend
+    container_name: practica1-backend
+    ports:
+      - "8080:55000"
+    environment:
+      - PORT=55000
+      - HOST=0.0.0.0
+      - API_KEY=mi_super_clave_secreta
+      - SECRET_KEY=tu_secret_key_aqui
+    volumes:
+      - ./backend/geocultural.db:/app/geocultural.db
+    restart: always
+
+  frontend:
+    image: nginx:alpine
+    container_name: practica1-frontend
+    ports:
+      - "80:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html
+    restart: always
