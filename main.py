@@ -28,7 +28,7 @@ def require_api_key(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         api_key = request.headers.get('X-API-Key')
-        if not api_key or api_key != settings.API_KEY:
+        if not api_key or api_key != API_KEY:
             return jsonify({"error": "API Key inválida o faltante"}), 401
         return f(*args, **kwargs)
     return decorated
@@ -45,7 +45,7 @@ def token_required(f):
             return jsonify({'message': 'Token is missing!'}), 401
         
         try:
-            data = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            data = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
             current_user_id = data['user_id']
             
             conn = get_db_connection()
@@ -71,7 +71,7 @@ def token_required(f):
         return f(*args, **kwargs)
     return decorated
 app = Flask(__name__)
-app.config['SECRET_KEY'] = settings.SECRET_KEY
+app.config['SECRET_KEY'] = SECRET_KEY
 # ==========================================
 # 5. RUTAS DE LA API
 # ==========================================
@@ -141,7 +141,7 @@ def buscar_por_region(region):
         description: Error interno
     """
     try:
-        response = requests.get(f"{settings.REST_COUNTRIES_API}/region/{region}", timeout=10)
+        response = requests.get(f"{REST_COUNTRIES_API}/region/{region}", timeout=10)
         response.raise_for_status()
         paises = response.json()
         return jsonify(paises[:12])
@@ -326,17 +326,17 @@ def get_weather(country_name):
       404:
         description: Coordenadas no encontradas
     """
-    if not settings.OPENWEATHER_API_KEY:
+    if not OPENWEATHER_API_KEY:
         return jsonify({"error": "Clima no disponible: API key no configurada"}), 503
     now = time.time()
     cache_key = country_name.lower()
-    if cache_key in weather_cache and (now - weather_cache[cache_key]["timestamp"]) < settings.WEATHER_CACHE_TTL:
+    if cache_key in weather_cache and (now - weather_cache[cache_key]["timestamp"]) < WEATHER_CACHE_TTL:
         return jsonify(weather_cache[cache_key]["data"])
     lat, lon = get_country_coordinates(country_name)
     if lat is None or lon is None:
         return jsonify({"error": "No se pudieron obtener coordenadas para el país"}), 404
     try:
-        url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={settings.OPENWEATHER_API_KEY}&units=metric&lang=es"
+        url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={OPENWEATHER_API_KEY}&units=metric&lang=es"
         response = requests.get(url, timeout=15)
         response.raise_for_status()
         data = response.json()
@@ -384,10 +384,10 @@ def register():
         # El resto de tu código sigue igual, pero usando el user_id que ya tenemos
         access_token = jwt.encode({
             'user_id': user_id,
-            'exp': datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+            'exp': datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         }, app.config['SECRET_KEY'], algorithm='HS256')
         refresh_token = str(uuid.uuid4())
-        expires_refresh = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        expires_refresh = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
         cursor.execute(
             "INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (%s, %s, %s)",
             (user_id, refresh_token, expires_refresh)
@@ -428,10 +428,10 @@ def login():
         return jsonify({"error": "Contraseña incorrecta"}), 401
     access_token = jwt.encode({
         'user_id': user_id,
-        'exp': datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        'exp': datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     }, app.config['SECRET_KEY'], algorithm='HS256')
     refresh_token = str(uuid.uuid4())
-    expires_refresh = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    expires_refresh = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     cursor.execute(
         "INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (%s, %s, %s)",
         (user_id, refresh_token, expires_refresh)
@@ -471,7 +471,7 @@ def refresh():
         return jsonify({"error": "Refresh token expired"}), 401
     new_access_token = jwt.encode({
         'user_id': user_id,
-        'exp': datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        'exp': datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     }, app.config['SECRET_KEY'], algorithm='HS256')
     conn.close()
     return jsonify({"access_token": new_access_token})
@@ -597,7 +597,7 @@ def eliminar_favorito(cca3):
 def not_found(e):
     return jsonify({"error": "Recurso no encontrado"}), 404
 def get_db_connection():
-    db_url = settings.DATABASE_URL
+    db_url = DATABASE_URL
     logger.info("Conectando con la base de datos...")
     
     if db_url and db_url.startswith('postgresql'):
@@ -697,7 +697,7 @@ def get_exchange_rates():
                 exchange_cache["timestamp"] = now
                 logger.info("Tasas de cambio actualizadas (Frankfurter)")
             else:
-                res2 = requests.get(settings.EXCHANGE_API, timeout=10)
+                res2 = requests.get(EXCHANGE_API, timeout=10)
                 if res2.status_code == 200:
                     data2 = res2.json()
                     if data2.get("result") == "success":
@@ -734,7 +734,7 @@ def get_country_from_cache_or_api(name):
 
     try:
         # 2. Si no está en caché, lo pedimos a la API externa
-        response = requests.get(f"{settings.REST_COUNTRIES_API}/name/{name}", timeout=10)
+        response = requests.get(f"{REST_COUNTRIES_API}/name/{name}", timeout=10)
         response.raise_for_status()
         data = response.json()
         
