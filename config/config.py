@@ -1,3 +1,5 @@
+# Permite usar una base de datos remota (Postgres) o local (SQLite)
+DATABASE_URL = os.getenv('DATABASE_URL', '')
 import os
 
 PORT = int(os.getenv('PORT', 55000))
