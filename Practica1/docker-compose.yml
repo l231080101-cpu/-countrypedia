@@ -3,23 +3,24 @@ services:
     build: ./backend
     container_name: practica1-backend
     ports:
-      - "8080:55000"
+      - "8080:5000"
     environment:
-      - PORT=55000
+      - PORT=5000
       - HOST=0.0.0.0
       - API_KEY=${API_KEY}
       - SECRET_KEY=${SECRET_KEY}
-      - DB_NAME=geocultural.db
+      - DATABASE_URL=${DATABASE_URL}
       - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}
-    volumes:
-      - ./backend/geocultural.db:/app/geocultural.db
+      - NEWS_API_KEY=${NEWS_API_KEY}
+      - ORIGEN_PERMITIDO=http://localhost:8080,http://localhost:5000
     restart: always
 
   frontend:
-    image: nginx:alpine
+    build:
+      context: ./frontend
+      args:
+        - API_BASE_URL=http://localhost:8080
     container_name: practica1-frontend
     ports:
       - "80:80"
-    volumes:
-      - ./frontend:/usr/share/nginx/html
     restart: always

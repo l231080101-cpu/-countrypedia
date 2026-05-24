@@ -1,0 +1,55 @@
+import os
+from flask import Flask, jsonify
+from flask_cors import CORS
+from flasgger import Swagger
+
+import config.settings as settings
+from models.database import init_db
+from routes.pais_routes import pais_bp
+from routes.auth_routes import auth_bp
+from routes.viaje_routes import viaje_bp
+
+swagger_config = {
+    "headers": [],
+    "specs": [{
+        "endpoint": 'apispec', "route": '/apispec.json',
+        "rule_filter": lambda rule: True, "model_filter": lambda tag: True
+    }],
+    "static_url_path": "/flasgger_static",
+    "swagger_ui": True,
+    "specs_route": "/docs/",
+    "info": {
+        "title": "CountryPedia API",
+        "description": "API para explorar países, gestionar favoritos y obtener datos de viaje.",
+        "version": "1.0.0"
+    }
+}
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = settings.SECRET_KEY
+
+origins = [o.strip() for o in settings.ORIGEN_PERMITIDO.split(',')]
+CORS(app, resources={r"/api/*": {"origins": origins}})
+Swagger(app, config=swagger_config)
+
+app.register_blueprint(pais_bp)
+app.register_blueprint(auth_bp)
+app.register_blueprint(viaje_bp)
+
+
+@app.route('/')
+def index():
+    return jsonify({"message": "CountryPedia API - Documentación en /docs"})
+
+
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({"error": "Recurso no encontrado"}), 404
+
+
+with app.app_context():
+    init_db()
+
+if __name__ == '__main__':
+    print(f"Servidor iniciado en {settings.HOST}:{settings.PORT}")
+    app.run(host=settings.HOST, port=settings.PORT)

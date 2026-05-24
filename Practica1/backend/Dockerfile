@@ -1,18 +1,33 @@
-# Imagen base de Python
-FROM python:3.11-slim
+# ============================================================
+# STAGE 1: Builder — instala dependencias (incluye build tools)
+# ============================================================
+FROM python:3.11-slim AS builder
 
-# Directorio de trabajo dentro del contenedor
+WORKDIR /build
+
+# Solo copia el archivo de dependencias para aprovechar caché
+COPY requirements.txt .
+
+# Instala en un prefijo separado para copiar solo lo necesario
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+
+# ============================================================
+# STAGE 2: Runtime — solo librerías necesarias para ejecutar
+# ============================================================
+FROM python:3.11-slim AS runtime
+
 WORKDIR /app
 
-# Copiar dependencias e instalarlas
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Solo ca-certificates para requests HTTPS (nada de build-essential, gcc, etc.)
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copiar el resto del código del backend
+# Copia únicamente los paquetes instalados, no el pip ni setuptools del builder
+COPY --from=builder /install /usr/local
+
+# Copia el código fuente
 COPY . .
 
-# Exponer el puerto que usa Flask (8080 según tu mensaje inicial)
-EXPOSE 55000
+EXPOSE 5000
 
-# Comando para ejecutar la app
-CMD ["python", "main.py"]
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:app"]
