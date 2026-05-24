@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from models.database import get_db_connection, close_db_connection, is_postgres
 
 
@@ -175,3 +176,21 @@ def is_jti_blacklisted(jti):
     cursor.close()
     close_db_connection(conn)
     return row is not None
+
+
+def cleanup_expired_tokens():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    pg = is_postgres()
+    ph = "%s" if pg else "?"
+    try:
+        cursor.execute(f"DELETE FROM token_blacklist WHERE expires_at < {ph}", (datetime.now(timezone.utc),))
+        deleted_blacklist = cursor.rowcount
+        cursor.execute(f"DELETE FROM refresh_tokens WHERE expires_at < {ph}", (datetime.now(timezone.utc),))
+        deleted_refresh = cursor.rowcount
+        conn.commit()
+        if deleted_blacklist > 0 or deleted_refresh > 0:
+            print(f"Limpieza: {deleted_blacklist} blacklist + {deleted_refresh} refresh tokens expirados")
+    finally:
+        cursor.close()
+        close_db_connection(conn)

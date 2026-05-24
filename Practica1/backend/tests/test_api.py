@@ -56,6 +56,56 @@ def test_register_short_password(client):
     assert resp.status_code == 400
 
 
+def test_register_weak_password(client):
+    resp = client.post('/api/register', json={
+        'username': 'weakpwd',
+        'email': 'weak@test.com',
+        'password': 'onlylower'
+    })
+    assert resp.status_code == 400
+    err = resp.get_json()['error']
+    assert 'mayúscula' in err
+
+
+def test_register_no_digit_password(client):
+    resp = client.post('/api/register', json={
+        'username': 'nodigit',
+        'email': 'nodigit@test.com',
+        'password': 'NoDigitsHere'
+    })
+    assert resp.status_code == 400
+    err = resp.get_json()['error']
+    assert 'número' in err
+
+
+def test_register_invalid_email(client):
+    resp = client.post('/api/register', json={
+        'username': 'bademail',
+        'email': 'not-an-email',
+        'password': 'TestPass123'
+    })
+    assert resp.status_code == 400
+    assert 'email' in resp.get_json()['error'].lower()
+
+
+def test_register_short_username(client):
+    resp = client.post('/api/register', json={
+        'username': 'ab',
+        'email': 'ab@test.com',
+        'password': 'TestPass123'
+    })
+    assert resp.status_code == 400
+
+
+def test_register_invalid_username(client):
+    resp = client.post('/api/register', json={
+        'username': 'user name!',
+        'email': 'valid@test.com',
+        'password': 'TestPass123'
+    })
+    assert resp.status_code == 400
+
+
 def test_login(client):
     reg = client.post('/api/register', json={
         'username': 'loginuser',

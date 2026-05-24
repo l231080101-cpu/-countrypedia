@@ -1,8 +1,9 @@
 import bcrypt
 import jwt
 import uuid
+import re
 from datetime import datetime, timedelta, timezone
-from config.settings import SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS
+from config.settings import SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS, EMAIL_REGEX
 from repositories.usuario_repository import (
     get_by_id,
     get_by_username_with_hash,
@@ -15,6 +16,26 @@ from repositories.usuario_repository import (
     remove_favorite as repo_remove_favorite,
     add_to_blacklist
 )
+
+
+def validate_password(password):
+    if len(password) < 8:
+        return "La contraseña debe tener al menos 8 caracteres"
+    if not re.search(r'[A-Z]', password):
+        return "La contraseña debe contener al menos una mayúscula"
+    if not re.search(r'[0-9]', password):
+        return "La contraseña debe contener al menos un número"
+    return None
+
+
+def validate_username(username):
+    if len(username) < 3:
+        return "El nombre de usuario debe tener al menos 3 caracteres"
+    if len(username) > 30:
+        return "El nombre de usuario no puede exceder 30 caracteres"
+    if not re.match(r'^[a-zA-Z0-9_]+$', username):
+        return "El nombre de usuario solo puede contener letras, números y guión bajo"
+    return None
 
 
 def generate_access_token(user_id):
@@ -32,27 +53,35 @@ def generate_refresh_token():
 def register(username, email, password):
     if not username or not email or not password:
         return None, "Faltan campos"
-    
-    if len(password) < 6:
-        return None, "La contraseña debe tener al menos 6 caracteres"
-    
+
+    if not EMAIL_REGEX.match(email):
+        return None, "Formato de email inválido"
+
+    err = validate_username(username)
+    if err:
+        return None, err
+
+    err = validate_password(password)
+    if err:
+        return None, err
+
     password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-    
+
     try:
         user_id = create_user(username, email, password_hash)
-        
+
         access_token = generate_access_token(user_id)
         refresh_token = generate_refresh_token()
         expires_refresh = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
-        
+
         create_refresh_token(user_id, refresh_token, expires_refresh)
-        
+
         return {
             "access_token": access_token,
             "refresh_token": refresh_token,
             "user": {"id": user_id, "username": username, "email": email}
         }, None
-        
+
     except Exception as e:
         error_msg = str(e)
         if "username" in error_msg.lower():

@@ -11,17 +11,19 @@ from services.auth_service import (
 )
 from services.pais_service import get_country_by_cca3
 from middleware.auth import require_api_key, token_required
+from middleware.rate_limiter import rate_limit
 
 auth_bp = Blueprint('auth', __name__)
 
 
 @auth_bp.route('/api/register', methods=['POST'])
+@rate_limit(max_requests=5, window_seconds=300)
 def register_route():
-    data = request.json
-    username = data.get('username')
-    email = data.get('email')
-    password = data.get('password')
-    
+    data = request.json or {}
+    username = (data.get('username') or '').strip()
+    email = (data.get('email') or '').strip().lower()
+    password = data.get('password') or ''
+
     result, error = register(username, email, password)
     if error:
         return jsonify({"error": error}), 400
@@ -29,11 +31,12 @@ def register_route():
 
 
 @auth_bp.route('/api/login', methods=['POST'])
+@rate_limit(max_requests=10, window_seconds=60)
 def login_route():
-    data = request.json
-    username = data.get('username')
-    password = data.get('password')
-    
+    data = request.json or {}
+    username = (data.get('username') or '').strip()
+    password = data.get('password') or ''
+
     result, error = login(username, password)
     if error:
         return jsonify({"error": error}), 401
@@ -41,10 +44,11 @@ def login_route():
 
 
 @auth_bp.route('/api/refresh', methods=['POST'])
+@rate_limit(max_requests=5, window_seconds=60)
 def refresh_route():
-    data = request.json
+    data = request.json or {}
     refresh_token = data.get('refresh_token')
-    
+
     result, error = refresh_access_token(refresh_token)
     if error:
         return jsonify({"error": error}), 400

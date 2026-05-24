@@ -1,4 +1,5 @@
 import os
+import threading
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flasgger import Swagger
@@ -8,6 +9,7 @@ from models.database import init_db
 from routes.pais_routes import pais_bp
 from routes.auth_routes import auth_bp
 from routes.viaje_routes import viaje_bp
+from repositories.usuario_repository import cleanup_expired_tokens
 
 swagger_config = {
     "headers": [],
@@ -49,6 +51,19 @@ def not_found(e):
 
 with app.app_context():
     init_db()
+
+if not os.getenv('DONT_CLEANUP_TOKENS'):
+    def _cleanup_loop():
+        while True:
+            threading.Event().wait(3600)
+            try:
+                with app.app_context():
+                    cleanup_expired_tokens()
+            except Exception:
+                pass
+
+    t = threading.Thread(target=_cleanup_loop, daemon=True)
+    t.start()
 
 if __name__ == '__main__':
     print(f"Servidor iniciado en {settings.HOST}:{settings.PORT}")

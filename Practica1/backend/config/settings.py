@@ -1,4 +1,5 @@
 import os
+import re
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -18,3 +19,8 @@ CACHE_EXCHANGE_TTL = int(os.getenv('CACHE_EXCHANGE_TTL', 86400))
 WEATHER_CACHE_TTL = 1800
 NEWS_API_KEY = os.getenv('NEWS_API_KEY')
 NEWS_CACHE_TTL = 3600
+
+if len(SECRET_KEY) < 32:
+    print(f"ADVERTENCIA: SECRET_KEY tiene solo {len(SECRET_KEY)} bytes. Se recomienda ≥32 bytes para HMAC-SHA256.")
+
+EMAIL_REGEX = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
