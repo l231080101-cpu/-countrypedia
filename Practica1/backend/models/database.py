@@ -113,18 +113,6 @@ def init_db():
         )
         """,
         f"""
-        CREATE INDEX IF NOT EXISTS idx_paises_cache_cca3 ON paises_cache(cca3)
-        """,
-        f"""
-        CREATE INDEX IF NOT EXISTS idx_favoritos_usuario ON favoritos_usuarios(usuario_id)
-        """,
-        f"""
-        CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id)
-        """,
-        f"""
-        CREATE INDEX IF NOT EXISTS idx_usuarios_username ON usuarios(username)
-        """,
-        f"""
         CREATE TABLE IF NOT EXISTS refresh_tokens (
             id {pk_type},
             user_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
@@ -141,6 +129,18 @@ def init_db():
             expires_at TIMESTAMP NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
+        """,
+        f"""
+        CREATE INDEX IF NOT EXISTS idx_paises_cache_cca3 ON paises_cache(cca3)
+        """,
+        f"""
+        CREATE INDEX IF NOT EXISTS idx_favoritos_usuario ON favoritos_usuarios(usuario_id)
+        """,
+        f"""
+        CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id)
+        """,
+        f"""
+        CREATE INDEX IF NOT EXISTS idx_usuarios_username ON usuarios(username)
         """
     ]
 

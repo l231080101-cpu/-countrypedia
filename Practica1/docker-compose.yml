@@ -12,7 +12,7 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}
       - NEWS_API_KEY=${NEWS_API_KEY}
-      - ORIGEN_PERMITIDO=http://localhost:8080,http://localhost:5000
+      - ORIGEN_PERMITIDO=http://localhost:8080,http://localhost,http://localhost:5000
     restart: always
 
   frontend:
