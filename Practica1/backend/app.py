@@ -26,12 +26,6 @@ swagger_config = {
         "version": "1.0.0"
     },
     "securityDefinitions": {
-        "ApiKeyAuth": {
-            "type": "apiKey",
-            "in": "header",
-            "name": "X-API-KEY",
-            "description": "API Key requerida para endpoints de favoritos"
-        },
         "BearerAuth": {
             "type": "apiKey",
             "in": "header",
@@ -40,7 +34,6 @@ swagger_config = {
         }
     },
     "security": [
-        {"ApiKeyAuth": []},
         {"BearerAuth": []}
     ]
 }

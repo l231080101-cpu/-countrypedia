@@ -1,0 +1,16 @@
+.env
+.git
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.db
+*.sqlite3
+*.log
+server_log.txt
+server_error.txt
+venv/
+env/
+tests/
+.gitignore
+.dockerignore
+README.md

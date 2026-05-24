@@ -4,15 +4,12 @@ services:
     container_name: practica1-backend
     ports:
       - "8080:5000"
+    env_file:
+      - ./backend/.env
     environment:
       - PORT=5000
       - HOST=0.0.0.0
-      - API_KEY=${API_KEY}
-      - SECRET_KEY=${SECRET_KEY}
-      - DATABASE_URL=${DATABASE_URL}
-      - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}
-      - NEWS_API_KEY=${NEWS_API_KEY}
-      - ORIGEN_PERMITIDO=http://localhost:8080,http://localhost,http://localhost:5000
+      - ORIGEN_PERMITIDO=http://localhost:8080,http://localhost,http://localhost:5000,http://localhost:5173
     restart: always
 
   frontend:

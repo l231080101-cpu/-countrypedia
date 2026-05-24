@@ -1,13 +1,15 @@
 import os
 import re
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+env_path = Path(__file__).resolve().parent.parent / '.env'
+load_dotenv(dotenv_path=env_path)
 
 PORT = int(os.getenv('PORT', 5000))
 HOST = os.getenv('HOST', '0.0.0.0')
 SECRET_KEY = os.getenv('SECRET_KEY', 'dev_secret_key_123')
-API_KEY_PROTECTION = os.getenv('API_KEY', 'mi_super_clave_secreta')
+API_KEY_PROTECTION = os.getenv('API_KEY')
 ORIGEN_PERMITIDO = os.getenv('ORIGEN_PERMITIDO', 'http://localhost:5000,http://localhost:8080,http://localhost')
 DATABASE_URL = os.getenv('DATABASE_URL') or 'geocultural.db'
 REST_COUNTRIES_API = os.getenv('REST_COUNTRIES_API', 'https://restcountries.com/v3.1')

@@ -260,17 +260,9 @@ def test_favorites_crud(client, auth_headers):
     assert not any(f['cca3'] == 'FRA' for f in favs)
 
 
-def test_favorites_requires_api_key(client, auth_data):
-    resp = client.post('/api/favoritos', json={'cca3': 'FRA'}, headers={
-        'Authorization': f"Bearer {auth_data['access_token']}"
-    })
-    assert resp.status_code == 401
-
-
 def test_favorites_requires_token(client, api_key):
-    resp = client.post('/api/favoritos', json={'cca3': 'FRA'}, headers={
-        'X-API-Key': api_key
-    })
+    resp = client.post('/api/favoritos', json={'cca3': 'FRA'})
+    assert resp.status_code == 401
     assert resp.status_code == 401
 
 

@@ -10,7 +10,7 @@ from services.auth_service import (
     remove_favorite
 )
 from services.pais_service import get_country_by_cca3
-from middleware.auth import require_api_key, token_required
+from middleware.auth import token_required
 from middleware.rate_limiter import rate_limit
 
 auth_bp = Blueprint('auth', __name__)
@@ -257,7 +257,6 @@ def me_route():
 
 
 @auth_bp.route('/api/favoritos', methods=['GET', 'POST'])
-@require_api_key
 @token_required
 def gestionar_favoritos():
     """List or add favorites for the authenticated user.
@@ -265,7 +264,6 @@ def gestionar_favoritos():
     tags:
       - Favorites
     security:
-      - ApiKeyAuth: []
       - BearerAuth: []
     parameters:
       - in: body
@@ -346,7 +344,6 @@ def gestionar_favoritos():
 
 
 @auth_bp.route('/api/favoritos/<cca3>', methods=['DELETE'])
-@require_api_key
 @token_required
 def eliminar_favorito(cca3):
     """Remove a country from favorites.
@@ -354,7 +351,6 @@ def eliminar_favorito(cca3):
     tags:
       - Favorites
     security:
-      - ApiKeyAuth: []
       - BearerAuth: []
     parameters:
       - in: path
