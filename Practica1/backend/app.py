@@ -24,7 +24,25 @@ swagger_config = {
         "title": "CountryPedia API",
         "description": "API para explorar países, gestionar favoritos y obtener datos de viaje.",
         "version": "1.0.0"
-    }
+    },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "type": "apiKey",
+            "in": "header",
+            "name": "X-API-KEY",
+            "description": "API Key requerida para endpoints de favoritos"
+        },
+        "BearerAuth": {
+            "type": "apiKey",
+            "in": "header",
+            "name": "Authorization",
+            "description": "Access JWT token: 'Bearer <token>'"
+        }
+    },
+    "security": [
+        {"ApiKeyAuth": []},
+        {"BearerAuth": []}
+    ]
 }
 
 app = Flask(__name__)
@@ -41,6 +59,20 @@ app.register_blueprint(viaje_bp)
 
 @app.route('/')
 def index():
+    """Health check endpoint.
+    ---
+    tags:
+      - Health
+    responses:
+      200:
+        description: API is running
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "CountryPedia API - Documentación en /docs"
+    """
     return jsonify({"message": "CountryPedia API - Documentación en /docs"})
 
 
