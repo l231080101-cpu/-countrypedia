@@ -10,7 +10,7 @@ services:
   - type: web
     name: countrypedia-backend
     runtime: docker
-    repo: https://github.com/tu-usuario/tu-repo
+    repo: https://github.com/l231080101-cpu/-countrypedia
     branch: main
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
@@ -38,7 +38,7 @@ services:
   - type: web
     name: countrypedia-frontend
     runtime: docker
-    repo: https://github.com/tu-usuario/tu-repo
+    repo: https://github.com/l231080101-cpu/-countrypedia
     branch: main
     dockerfilePath: ./frontend/Dockerfile
     dockerContext: ./frontend
