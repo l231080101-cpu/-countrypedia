@@ -126,17 +126,17 @@ def get_weather(country_name):
         return None
 
 
-def get_news(country_name):
+def get_news(country_name, language='es'):
     if not NEWS_API_KEY:
         return None
 
     now = time.time()
-    cache_key = country_name.lower()
+    cache_key = f"{country_name.lower()}:{language}"
     if cache_key in news_cache and (now - news_cache[cache_key]["timestamp"]) < NEWS_CACHE_TTL:
         return news_cache[cache_key]["data"]
 
     try:
-        url = f"https://newsapi.org/v2/everything?q={country_name}&language=es&pageSize=5&sortBy=relevancy&apiKey={NEWS_API_KEY}"
+        url = f"https://newsapi.org/v2/everything?q={country_name}&language={language}&pageSize=5&sortBy=relevancy&apiKey={NEWS_API_KEY}"
         response = requests.get(url, timeout=15)
         response.raise_for_status()
         data = response.json()

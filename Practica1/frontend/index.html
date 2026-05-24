@@ -886,7 +886,7 @@
 
         let newsHtml = '';
         try {
-            const resNews = await fetch(`${API_BASE}/api/noticias/${encodeURIComponent(country.name.common)}`);
+            const resNews = await fetch(`${API_BASE}/api/noticias/${encodeURIComponent(country.name.common)}?language=${currentLang}`);
             if (resNews.ok) {
                 const newsData = await resNews.json();
                 if (newsData.articles && newsData.articles.length > 0) {

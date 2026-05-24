@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from services.viaje_service import (
     get_exchange_rates,
     get_cambio,
@@ -42,7 +42,8 @@ def get_weather_route(country_name):
 
 @viaje_bp.route('/api/noticias/<country_name>')
 def noticias_route(country_name):
-    noticias = get_news(country_name)
+    language = request.args.get('language', 'es')
+    noticias = get_news(country_name, language)
     if noticias:
         return jsonify(noticias)
     return jsonify({"error": "Noticias no disponibles"}), 503
