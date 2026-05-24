@@ -287,11 +287,13 @@ def test_cambio_unsupported(client):
 
 
 def test_costos(client):
-    resp = client.get('/api/costos/France')
+    resp = client.get('/api/costo-vida/France')
     assert resp.status_code == 200
     data = resp.get_json()
-    for key in ('comida', 'hospedaje', 'transporte', 'ocio', 'seguridad'):
-        assert key in data
+    assert 'factor' in data
+    assert 'costs_usd' in data
+    for key in ('comida', 'transporte', 'alojamiento', 'entretenimiento', 'servicios'):
+        assert key in data['costs_usd']
 
 
 def test_travel_advisory(client):

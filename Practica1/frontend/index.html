@@ -747,6 +747,18 @@
        async function verDetalles(name) {
     const modal = document.getElementById('modal-detalles');
     const content = document.getElementById('modal-content');
+    content.innerHTML = `
+        <div class="animate-pulse space-y-4 p-4">
+            <div class="h-32 sm:h-40 bg-white/5 rounded-3xl"></div>
+            <div class="h-6 bg-white/10 rounded w-1/2 mx-auto"></div>
+            <div class="h-4 bg-white/10 rounded w-3/4 mx-auto"></div>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="h-20 bg-white/5 rounded-2xl"></div>
+                <div class="h-20 bg-white/5 rounded-2xl"></div>
+            </div>
+            <div class="h-20 bg-white/5 rounded-2xl"></div>
+        </div>
+    `;
     
     try {
         const url = `${API_BASE}/api/buscar/${encodeURIComponent(name)}`;
@@ -968,7 +980,7 @@
         
         async function cargarListaPaises() {
             try {
-                const response = await fetch('https://restcountries.com/v3.1/all?fields=name,flags,currencies,region');
+                const response = await fetch(`${API_BASE}/api/paises`);
                 const data = await response.json();
                 allCountriesList = data.sort((a, b) => a.name.common.localeCompare(b.name.common));
                 
@@ -1103,34 +1115,13 @@
                     }
                 } catch (e) { console.log("Error obteniendo tasas de cambio"); }
 
-                const factoresCosto = {
-                    'Mexico': 1.0, 'United States': 2.2, 'Canada': 1.9, 'Brazil': 0.8, 'Argentina': 0.7,
-                    'Colombia': 0.7, 'Chile': 0.9, 'Peru': 0.6, 'Spain': 1.1, 'France': 1.5, 'Germany': 1.4,
-                    'Italy': 1.3, 'United Kingdom': 1.6, 'Netherlands': 1.5, 'Sweden': 1.7, 'Switzerland': 2.5,
-                    'Japan': 1.4, 'China': 0.6, 'India': 0.4, 'South Korea': 1.3, 'Thailand': 0.5, 'Vietnam': 0.4,
-                    'Indonesia': 0.5, 'Russia': 0.7, 'South Africa': 0.7, 'Egypt': 0.5, 'Nigeria': 0.4, 'Kenya': 0.5,
-                    'Australia': 1.8, 'New Zealand': 1.6,
-                };
+                const [costBase, costTarget] = await Promise.all([
+                    fetch(`${API_BASE}/api/costo-vida/${baseName}`).then(r => r.json()).catch(() => null),
+                    fetch(`${API_BASE}/api/costo-vida/${targetName}`).then(r => r.json()).catch(() => null)
+                ]);
 
-                let factorBase = factoresCosto[baseCountry.name.common];
-                if (!factorBase) {
-                    const region = baseCountry.region;
-                    if (region === 'Europe') factorBase = 1.3;
-                    else if (region === 'Asia') factorBase = 0.8;
-                    else if (region === 'Africa') factorBase = 0.6;
-                    else if (region === 'Oceania') factorBase = 1.4;
-                    else factorBase = 1.0;
-                }
-
-                let factorTarget = factoresCosto[targetCountry.name.common];
-                if (!factorTarget) {
-                    const region = targetCountry.region;
-                    if (region === 'Europe') factorTarget = 1.3;
-                    else if (region === 'Asia') factorTarget = 0.8;
-                    else if (region === 'Africa') factorTarget = 0.6;
-                    else if (region === 'Oceania') factorTarget = 1.4;
-                    else factorTarget = 1.0;
-                }
+                const factorBase = costBase?.factor || 1.0;
+                const factorTarget = costTarget?.factor || 1.0;
 
                 const gastosReferencia = {
                     comida: 350,
@@ -1423,10 +1414,10 @@
             loading.classList.remove('hidden');
             document.getElementById('section-title').innerText = `${t('paises_en')} ${region}`;
             try {
-                const res = await fetch(`https://restcountries.com/v3.1/region/${region}`);
+                const res = await fetch(`${API_BASE}/api/region/${region}`);
                 const data = await res.json();
                 loading.classList.add('hidden');
-                grid.innerHTML = data.slice(0, 12).map(c => createCountryCard(c)).join('');
+                grid.innerHTML = data.map(c => createCountryCard(c)).join('');
             } catch (err) { 
                 loading.classList.add('hidden');
                 console.error(err);

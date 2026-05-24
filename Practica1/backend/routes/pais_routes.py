@@ -3,7 +3,8 @@ from services.pais_service import (
     get_country_from_cache_or_api,
     register_consulta,
     get_countries_by_region,
-    get_populares
+    get_populares,
+    get_all_countries_lightweight
 )
 
 pais_bp = Blueprint('pais', __name__)
@@ -123,3 +124,31 @@ def populares_route():
         return jsonify(populares)
     except Exception:
         return jsonify({"error": "Error al obtener países populares"}), 500
+
+
+@pais_bp.route('/api/paises')
+def listar_paises():
+    """Get lightweight list of all countries.
+    ---
+    tags:
+      - Countries
+    responses:
+      200:
+        description: List of all countries with name, flags, currencies, region
+        schema:
+          type: array
+          items:
+            type: object
+      500:
+        description: Internal error
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
+    try:
+        paises = get_all_countries_lightweight()
+        return jsonify(paises)
+    except Exception:
+        return jsonify({"error": "Error al obtener lista de países"}), 500

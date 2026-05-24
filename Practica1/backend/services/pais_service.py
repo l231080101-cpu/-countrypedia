@@ -1,3 +1,4 @@
+import time
 import requests
 import json
 from config.settings import REST_COUNTRIES_API
@@ -105,3 +106,28 @@ def register_consulta(pais_nombre):
 
 def get_populares(limit=10):
     return repo_get_populares(limit)
+
+
+_all_countries_list_cache = {"data": None, "timestamp": 0}
+
+
+def get_all_countries_lightweight():
+    global _all_countries_list_cache
+    now = time.time()
+    if _all_countries_list_cache["data"] and (now - _all_countries_list_cache["timestamp"]) < 3600:
+        return _all_countries_list_cache["data"]
+
+    try:
+        response = requests.get(
+            f"{REST_COUNTRIES_API}/all?fields=name,flags,currencies,region,cca3",
+            timeout=15
+        )
+        response.raise_for_status()
+        data = response.json()
+        data.sort(key=lambda c: c.get("name", {}).get("common", ""))
+        _all_countries_list_cache = {"data": data, "timestamp": now}
+        return data
+    except Exception as e:
+        if _all_countries_list_cache["data"]:
+            return _all_countries_list_cache["data"]
+        raise e

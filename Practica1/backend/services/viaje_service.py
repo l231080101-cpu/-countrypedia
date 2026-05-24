@@ -1,6 +1,5 @@
 import time
 import requests
-import random
 from config.settings import EXCHANGE_API, OPENWEATHER_API_KEY, WEATHER_CACHE_TTL, CACHE_EXCHANGE_TTL, NEWS_API_KEY, NEWS_CACHE_TTL
 from data.travel_data import REGION_DEFAULTS, travel_advisory_data
 from services.pais_service import get_country_from_cache_or_api, get_country_coordinates
@@ -9,6 +8,7 @@ from services.pais_service import get_country_from_cache_or_api, get_country_coo
 exchange_cache = {"data": None, "timestamp": 0}
 weather_cache = {}
 news_cache = {}
+cost_living_cache = {}
 
 
 def get_exchange_rates():
@@ -45,15 +45,83 @@ def get_cambio(moneda_codigo):
     return None
 
 
-def get_dummy_costos(pais):
-    random.seed(pais)
-    return {
-        "comida": random.randint(3, 10),
-        "hospedaje": random.randint(2, 10),
-        "transporte": random.randint(4, 10),
-        "ocio": random.randint(3, 10),
-        "seguridad": random.randint(5, 10)
+def get_cost_of_living(country_name):
+    now = time.time()
+    cache_key = country_name.lower()
+    if cache_key in cost_living_cache and (now - cost_living_cache[cache_key]["timestamp"]) < 86400:
+        return cost_living_cache[cache_key]["data"]
+
+    region_cost_factors = {
+        "Europe": 1.3, "North America": 1.6, "South America": 0.7,
+        "Asia": 0.8, "Africa": 0.6, "Oceania": 1.4, "Antarctic": 1.0
     }
+
+    try:
+        pais_data = get_country_from_cache_or_api(country_name)
+        if not pais_data:
+            return None
+
+        region = pais_data.get("region", "Americas")
+        cca2 = pais_data.get("cca2", "").lower()
+        factor = region_cost_factors.get(region, 1.0)
+
+        if cca2:
+            try:
+                wb_url = f"https://api.worldbank.org/v2/country/{cca2}/indicator/NY.GDP.PCAP.CD?format=json&per_page=1"
+                wb_resp = requests.get(wb_url, timeout=10)
+                if wb_resp.status_code == 200:
+                    wb_data = wb_resp.json()
+                    if len(wb_data) > 1 and wb_data[1] and wb_data[1][0].get("value"):
+                        gdp = wb_data[1][0]["value"]
+                        factor = max(0.3, min(3.0, gdp / 12000))
+            except Exception:
+                pass
+
+        reference = {"comida": 350, "transporte": 120, "alojamiento": 800, "entretenimiento": 200, "servicios": 150}
+        costs_usd = {k: round(v * factor) for k, v in reference.items()}
+
+        result = {"factor": round(factor, 2), "costs_usd": costs_usd, "region": region}
+        cost_living_cache[cache_key] = {"data": result, "timestamp": now}
+        return result
+
+    except Exception as e:
+        print(f"Error obteniendo costo de vida: {e}")
+        return None
+cost_living_cache = {}
+
+
+def get_exchange_rates():
+    global exchange_cache
+    now = time.time()
+    if exchange_cache["data"] is None or (now - exchange_cache["timestamp"]) > CACHE_EXCHANGE_TTL:
+        try:
+            response = requests.get("https://api.frankfurter.app/latest?from=USD", timeout=15)
+            if response.status_code == 200:
+                data = response.json()
+                exchange_cache["data"] = data["rates"]
+                exchange_cache["timestamp"] = now
+                print("Tasas de cambio actualizadas (Frankfurter)")
+            else:
+                res2 = requests.get(EXCHANGE_API, timeout=10)
+                if res2.status_code == 200:
+                    data2 = res2.json()
+                    if data2.get("result") == "success":
+                        exchange_cache["data"] = data2["rates"]
+                        exchange_cache["timestamp"] = now
+                        print("Tasas de cambio actualizadas (ExchangeRate-API)")
+        except Exception as e:
+            print(f"Error obteniendo tasas: {e}")
+    return exchange_cache["data"]
+
+
+def get_cambio(moneda_codigo):
+    rates = get_exchange_rates()
+    if rates:
+        tasa = rates.get(moneda_codigo.upper())
+        if tasa:
+            return {"tasa": tasa, "base": "USD"}
+        return None
+    return None
 
 
 def get_travel_advisory(country_name):

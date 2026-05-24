@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from services.viaje_service import (
     get_exchange_rates,
     get_cambio,
-    get_dummy_costos,
+    get_cost_of_living,
     get_travel_advisory,
     get_weather,
     get_news
@@ -52,25 +52,53 @@ def obtener_cambio(moneda_codigo):
     return jsonify({"error": "Moneda no soportada"}), 404
 
 
-@viaje_bp.route('/api/costos/<pais>')
-def obtener_costos(pais):
-    """Get estimated travel costs for a country.
+@viaje_bp.route('/api/costo-vida/<country_name>')
+def obtener_costo_vida(country_name):
+    """Get real cost-of-living estimate for a country.
     ---
     tags:
       - Travel
     parameters:
       - in: path
-        name: pais
+        name: country_name
         type: string
         required: true
         description: Country name
     responses:
       200:
-        description: Estimated costs
+        description: Cost of living estimate with factor and monthly costs in USD
         schema:
           type: object
+          properties:
+            factor:
+              type: number
+            costs_usd:
+              type: object
+              properties:
+                comida:
+                  type: integer
+                transporte:
+                  type: integer
+                alojamiento:
+                  type: integer
+                entretenimiento:
+                  type: integer
+                servicios:
+                  type: integer
+            region:
+              type: string
+      503:
+        description: Data not available
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
     """
-    return jsonify(get_dummy_costos(pais))
+    costos = get_cost_of_living(country_name)
+    if costos:
+        return jsonify(costos)
+    return jsonify({"error": "Costo de vida no disponible"}), 503
 
 
 @viaje_bp.route('/api/travel-advisory/<country_name>')
