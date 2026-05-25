@@ -1,31 +1,22 @@
 # Entornos virtuales
 venv/
 env/
-.venv/
 
 # Base de datos local
 *.db
 *.sqlite3
 
-# Secretos
+# Secretos (¡CRÍTICO!)
 .env
-.env.local
-*.env
-
-# VS Code
-.vscode/
-.idea/
-*.swp
-*.swo
+config/config.py  # Si contiene llaves reales
 
 # Python
 __pycache__/
 *.py[cod]
-*.pyo
-*.egg-info/
-dist/
-build/
+.pytest_cache/
 
-# Sistema
-.DS_Store
-Thumbs.db
+# Logs y temporales
+server_log.txt
+server_error.txt
+*.log
+tmp/

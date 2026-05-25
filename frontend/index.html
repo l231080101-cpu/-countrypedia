@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title data-i18n="page_title">CountryPedia | Global Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
+        
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+        .bg-animated {
+            background: radial-gradient(circle at top right, #1e1b4b, #0f172a, #000000);
+            background-attachment: fixed;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(139, 92, 246, 0.5); 
+            transform: translateY(-5px) scale(1.01);
+        }
+
+        .btn-neon {
+            background: linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%);
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+        }
+
+        .fade-in { animation: fadeIn 0.5s ease forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .comparison-card {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(217, 70, 239, 0.1) 100%);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+        
+        @media (max-width: 640px) {
+            .modal-content {
+                max-height: 90vh;
+                overflow-y: auto;
+                padding: 1rem;
+            }
+            .comparison-card p, .comparison-card span {
+                font-size: 0.75rem;
+            }
+        }
+        
+        .mobile-menu {
+            transition: all 0.3s ease;
+        }
+        
+        #map {
+            height: 250px;
+            width: 100%;
+            border-radius: 1rem;
+            z-index: 1;
+        }
+        .leaflet-container {
+            background: #1e1b4b;
+            border-radius: 1rem;
+        }
+        .leaflet-control-zoom a {
+            background: rgba(30, 27, 75, 0.9) !important;
+            color: white !important;
+            border-color: rgba(255,255,255,0.1) !important;
+        }
+        .leaflet-control-attribution {
+            background: rgba(0,0,0,0.5) !important;
+            color: #888 !important;
+            font-size: 8px !important;
+        }
+        .leaflet-control-attribution a {
+            color: #aaa !important;
+        }
+        #toast-container {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            pointer-events: none;
+        }
+        .toast {
+            pointer-events: auto;
+            padding: 0.75rem 1.25rem;
+            border-radius: 1rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            animation: toastIn 0.3s ease forwards;
+            max-width: 24rem;
+        }
+        .toast-success { background: rgba(16, 185, 129, 0.9); color: white; }
+        .toast-error { background: rgba(239, 68, 68, 0.9); color: white; }
+        .toast-info { background: rgba(139, 92, 246, 0.9); color: white; }
+        .toast-warning { background: rgba(245, 158, 11, 0.9); color: white; }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(1rem) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .toast-removing { animation: toastOut 0.25s ease forwards; }
+        @keyframes toastOut {
+            from { opacity: 1; transform: translateY(0) scale(1); }
+            to { opacity: 0; transform: translateY(1rem) scale(0.95); }
+        }
+    </style>
+</head>
+<body class="bg-animated min-h-screen text-slate-100">
+
+    <nav class="sticky top-0 z-50 px-4 sm:px-6 py-3 backdrop-blur-md border-b border-white/10">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2 group cursor-pointer" onclick="irAExplorar()">
+                <div class="p-2 bg-violet-600 rounded-lg group-hover:rotate-12 transition-transform">
+                    <i class="fas fa-globe text-white text-xl"></i>
+                </div>
+                <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-white uppercase italic">Country<span class="text-violet-500">Pedia</span></h1>
+            </div>
+            
+            <div class="hidden md:flex items-center gap-6 text-sm font-semibold uppercase tracking-widest">
+                <button onclick="irAExplorar()" class="hover:text-violet-400 transition-colors" data-i18n="nav_explorar">Explorar</button>
+                <button onclick="verFavoritos()" class="hover:text-violet-400 transition-colors" data-i18n="nav_favoritos">Favoritos</button>
+                <button onclick="mostrarTipoCambio()" class="glass-card px-4 py-2 rounded-full text-xs transition-all hover:border-violet-500">
+                    <i class="fas fa-dollar-sign mr-1"></i> <span data-i18n="nav_usd_today">USD Hoy</span>
+                </button>
+                <button id="langBtnEs" onclick="setLang('es')" class="text-sm font-bold text-violet-400 transition-colors" title="Español">ES</button>
+                <button id="langBtnEn" onclick="setLang('en')" class="text-sm font-bold text-slate-500 hover:text-violet-400 transition-colors" title="English">EN</button>
+                <button onclick="manejarSesion()" class="btn-neon px-6 py-2 rounded-full text-xs transition-all hover:scale-105 active:scale-95 text-white">
+                    <span id="authButtonText" data-i18n="nav_session">Sesión</span>
+                </button>
+            </div>
+            
+            <button id="mobileMenuBtn" class="md:hidden text-white text-2xl focus:outline-none">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        
+        <div id="mobileMenu" class="md:hidden hidden mt-4 pt-4 border-t border-white/10 flex flex-col gap-3 text-center text-sm font-semibold uppercase tracking-widest">
+            <button onclick="irAExplorar(); toggleMobileMenu()" class="py-2 hover:text-violet-400 transition-colors" data-i18n="nav_explorar">Explorar</button>
+            <button onclick="verFavoritos(); toggleMobileMenu()" class="py-2 hover:text-violet-400 transition-colors" data-i18n="nav_favoritos">Favoritos</button>
+            <button onclick="mostrarTipoCambio(); toggleMobileMenu()" class="py-2 glass-card rounded-full w-full text-xs hover:border-violet-500">
+                <span data-i18n="nav_usd_today">USD Hoy</span>
+            </button>
+            <div class="flex justify-center gap-4 py-1">
+                <button onclick="setLang('es'); toggleMobileMenu()" id="langBtnEsMob" class="text-sm font-bold text-violet-400 transition-colors">ES</button>
+                <button onclick="setLang('en'); toggleMobileMenu()" id="langBtnEnMob" class="text-sm font-bold text-slate-500 hover:text-violet-400 transition-colors">EN</button>
+            </div>
+            <button onclick="manejarSesion(); toggleMobileMenu()" class="btn-neon py-2 rounded-full text-xs">
+                <span data-i18n="nav_session">Sesión</span>
+            </button>
+        </div>
+    </nav>
+
+    <section class="relative pt-12 sm:pt-20 pb-12 px-4 overflow-hidden">
+        <div class="max-w-5xl mx-auto text-center relative z-10">
+            <span class="inline-block px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 text-[10px] sm:text-xs font-bold mb-6 tracking-widest uppercase" data-i18n="hero_badge">
+                v2.0 Enciclopedia Global
+            </span>
+            <h2 class="text-3xl sm:text-5xl md:text-7xl font-extrabold mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-500 leading-tight" data-i18n="hero_title">
+                El mundo entero, <br> en alta resolución.
+            </h2>
+            
+            <div class="max-w-2xl mx-auto mt-8 sm:mt-12 relative group">
+                <div class="absolute -inset-1 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-2xl blur opacity-25 group-focus-within:opacity-75 transition duration-1000"></div>
+                <div class="relative flex items-center bg-slate-900 rounded-2xl overflow-hidden border border-white/10">
+                    <i class="fas fa-search ml-4 sm:ml-6 text-slate-500"></i>
+                    <input type="text" id="search" list="country-list" data-i18n-placeholder="hero_search" placeholder="Escribe el nombre de un país (ej: mexico)..." 
+                    class="w-full bg-transparent px-4 sm:px-6 py-4 sm:py-5 outline-none text-white placeholder:text-slate-600 font-medium text-sm sm:text-base">
+                    <datalist id="country-list"></datalist>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 mb-8 sm:mb-12">
+        <div class="flex flex-wrap justify-center gap-2 sm:gap-3">
+            <button onclick="filtrarRegion('Americas')" class="glass-card px-3 sm:px-5 py-2 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-widest hover:border-violet-500 transition-all flex items-center gap-1 sm:gap-2">
+                <i class="fas fa-map-marked-alt text-violet-400 text-xs"></i> <span data-i18n="region_americas">América</span>
+            </button>
+            <button onclick="filtrarRegion('Europe')" class="glass-card px-3 sm:px-5 py-2 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-widest hover:border-blue-500 transition-all flex items-center gap-1 sm:gap-2">
+                <i class="fas fa-landmark text-blue-400 text-xs"></i> <span data-i18n="region_europe">Europa</span>
+            </button>
+            <button onclick="filtrarRegion('Africa')" class="glass-card px-3 sm:px-5 py-2 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-widest hover:border-orange-500 transition-all flex items-center gap-1 sm:gap-2">
+                <i class="fas fa-hippo text-orange-400 text-xs"></i> <span data-i18n="region_africa">África</span>
+            </button>
+            <button onclick="filtrarRegion('Asia')" class="glass-card px-3 sm:px-5 py-2 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-widest hover:border-red-500 transition-all flex items-center gap-1 sm:gap-2">
+                <i class="fas fa-torii-gate text-red-400 text-xs"></i> <span data-i18n="region_asia">Asia</span>
+            </button>
+            <button onclick="filtrarRegion('Oceania')" class="glass-card px-3 sm:px-5 py-2 rounded-xl text-[9px] sm:text-[10px] font-bold uppercase tracking-widest hover:border-teal-500 transition-all flex items-center gap-1 sm:gap-2">
+                <i class="fas fa-fish text-teal-400 text-xs"></i> <span data-i18n="region_oceania">Oceanía</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="populares-section" class="max-w-7xl mx-auto px-4 sm:px-6 mb-6 hidden">
+        <div class="flex flex-wrap items-center justify-center gap-2">
+            <span class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-widest mr-1" data-i18n="populares_label">Populares:</span>
+            <div id="populares-list" class="flex flex-wrap gap-2"></div>
+        </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto p-4 sm:p-6">
+        <div class="mb-6 sm:mb-10 border-b border-white/5 pb-3 sm:pb-4">
+            <h3 id="section-title" class="text-lg sm:text-xl font-bold text-white" data-i18n="section_title">Explorar Países</h3>
+            <p id="section-desc" class="text-slate-500 text-xs sm:text-sm" data-i18n="section_desc">Resultados globales en tiempo real</p>
+        </div>
+
+        <div id="loading" class="hidden text-center py-10">
+            <i class="fas fa-circle-notch fa-spin text-4xl text-violet-500"></i>
+        </div>
+
+        <div id="grid-paises" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-8">
+            <div class="text-slate-500 col-span-full text-center py-10 italic text-sm" id="empty-state" data-i18n="empty_search">Comienza a escribir en el buscador para explorar...</div>
+        </div>
+    </main>
+
+    <!-- Modales -->
+    <div id="modal-detalles" class="hidden fixed inset-0 z-[100] flex items-center justify-center px-3 sm:px-4 bg-slate-950/90 backdrop-blur-md">
+        <div class="glass-card max-w-lg w-full rounded-2xl sm:rounded-3xl p-5 sm:p-8 relative fade-in border-violet-500/30 max-h-[90vh] overflow-y-auto">
+            <button onclick="cerrarModal()" class="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <div id="modal-content" class="space-y-4 sm:space-y-6"></div>
+            <button onclick="cerrarModal()" class="w-full mt-6 sm:mt-8 py-3 sm:py-4 rounded-2xl btn-neon font-bold text-xs uppercase tracking-widest text-white" data-i18n="modal_close">
+                Cerrar Ventana
+            </button>
+        </div>
+    </div>
+
+    <div id="modal-comparacion" class="hidden fixed inset-0 z-[100] flex items-center justify-center px-3 sm:px-4 bg-slate-950/95 backdrop-blur-md overflow-y-auto py-4 sm:py-8">
+        <div class="glass-card max-w-4xl w-full rounded-2xl sm:rounded-3xl p-4 sm:p-8 relative fade-in border-violet-500/30 max-h-[95vh] overflow-y-auto">
+            <button onclick="cerrarComparacion()" class="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors z-10">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-2 text-center" data-i18n="compare_title">Comparación de Gastos</h2>
+            <p class="text-center text-slate-400 mb-4 sm:mb-8 text-xs sm:text-sm" data-i18n="compare_subtitle">Comparativa de costo de vida y gastos diarios</p>
+            <div class="mb-4 sm:mb-6">
+                <label class="block text-[10px] font-bold text-violet-400 uppercase tracking-widest mb-2 ml-1" data-i18n="compare_base">País de origen (base)</label>
+                <select id="baseCountrySelect" class="w-full bg-slate-900/50 border border-white/10 rounded-2xl py-3 sm:py-4 px-4 sm:px-6 text-white focus:border-violet-500 outline-none transition-all text-sm">
+                    <option value="" data-i18n="compare_select">Selecciona un país base</option>
+                </select>
+            </div>
+            <div id="comparacion-content" class="space-y-4 sm:space-y-6"></div>
+            <button onclick="cerrarComparacion()" class="w-full mt-6 sm:mt-8 py-3 sm:py-4 rounded-2xl btn-neon font-bold text-xs uppercase tracking-widest text-white" data-i18n="modal_close_compare">
+                Cerrar Comparación
+            </button>
+        </div>
+    </div>
+
+    <div id="modal-tipo-cambio" class="hidden fixed inset-0 z-[120] flex items-center justify-center px-3 sm:px-4 bg-slate-950/95 backdrop-blur-xl">
+        <div class="glass-card max-w-md w-full rounded-2xl sm:rounded-3xl p-5 sm:p-8 relative fade-in border-violet-500/30 max-h-[90vh] overflow-y-auto">
+            <button onclick="cerrarTipoCambio()" class="absolute top-3 right-3 sm:top-4 sm:right-4 text-slate-500 hover:text-white transition-colors">
+                <i class="fas fa-times text-xl sm:text-2xl"></i>
+            </button>
+            <h2 class="text-xl sm:text-2xl font-extrabold text-white mb-2 sm:mb-3" data-i18n="exchange_title">💰 Tipo de Cambio USD</h2>
+            <p class="text-slate-400 text-xs sm:text-sm mb-4 sm:mb-6" data-i18n="exchange_subtitle">Cotización del dólar frente a otras monedas</p>
+            <div id="exchange-rates-content" class="space-y-2 sm:space-y-3">
+                <div class="text-center text-slate-400 text-sm" data-i18n="loading_text">Cargando...</div>
+            </div>
+            <button onclick="cerrarTipoCambio()" class="w-full mt-5 sm:mt-6 py-2 sm:py-3 rounded-2xl btn-neon font-bold text-xs uppercase tracking-widest text-white" data-i18n="modal_close_exchange">
+                Cerrar
+            </button>
+        </div>
+    </div>
+
+    <div id="modal-sesion" class="hidden fixed inset-0 z-[110] flex items-center justify-center px-4 bg-slate-950/95 backdrop-blur-xl">
+        <div class="glass-card max-w-md w-full rounded-2xl sm:rounded-3xl p-6 sm:p-10 relative fade-in border-violet-500/30 max-h-[90vh] overflow-y-auto">
+            <button onclick="cerrarSesion()" class="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <div id="view-login" class="fade-in">
+                <div class="text-center mb-6 sm:mb-8">
+                    <div class="inline-flex p-3 bg-violet-600 rounded-xl mb-4 shadow-lg shadow-violet-500/20">
+                        <i class="fas fa-user-circle text-white text-3xl"></i>
+                    </div>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold text-white" data-i18n="login_title">Acceso Explorer</h2>
+                    <p class="text-slate-400 text-xs sm:text-sm mt-2" data-i18n="login_subtitle">Gestiona tus descubrimientos globales</p>
+                </div>
+                <form id="loginForm" class="space-y-4 sm:space-y-5">
+                    <div>
+                        <label class="block text-[10px] font-bold text-violet-400 uppercase tracking-widest mb-2 ml-1" data-i18n="login_user">Usuario</label>
+                        <div class="relative group">
+                            <i class="fas fa-user absolute left-4 top-4 text-slate-600 group-focus-within:text-violet-400 transition-colors"></i>
+                            <input type="text" id="loginUsername" data-i18n-placeholder="login_user" placeholder="Nombre de usuario" required
+                            class="w-full bg-slate-900/50 border border-white/10 rounded-2xl py-3 sm:py-4 pl-10 sm:pl-12 pr-4 text-white focus:border-violet-500 outline-none transition-all placeholder:text-slate-600 text-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-violet-400 uppercase tracking-widest mb-2 ml-1" data-i18n="login_password">Contraseña</label>
+                        <div class="relative group">
+                            <i class="fas fa-lock absolute left-4 top-4 text-slate-600 group-focus-within:text-violet-400 transition-colors"></i>
+                            <input type="password" id="loginPassword" data-i18n-placeholder="login_password" placeholder="••••••••" required
+                            class="w-full bg-slate-900/50 border border-white/10 rounded-2xl py-3 sm:py-4 pl-10 sm:pl-12 pr-4 text-white focus:border-violet-500 outline-none transition-all placeholder:text-slate-600 text-sm">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full py-3 sm:py-4 rounded-2xl btn-neon font-bold text-xs uppercase tracking-widest text-white hover:scale-[1.02] active:scale-95 transition-all mt-2 sm:mt-4" data-i18n="login_button">
+                        Entrar al Sistema
+                    </button>
+                    <p class="text-center text-[10px] text-slate-500 uppercase tracking-tighter mt-3 sm:mt-4">
+                        <span data-i18n="login_no">¿No tienes cuenta?</span> <button type="button" onclick="cambiarVista('registro')" class="text-violet-400 hover:underline" data-i18n="login_signup">Regístrate aquí</button>
+                    </p>
+                </form>
+            </div>
+            <div id="view-registro" class="hidden fade-in">
+                <div class="text-center mb-6 sm:mb-8">
+                    <div class="inline-flex p-3 bg-fuchsia-600 rounded-xl mb-4 shadow-lg shadow-fuchsia-500/20">
+                        <i class="fas fa-user-plus text-white text-3xl"></i>
+                    </div>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold text-white" data-i18n="register_title">Crear Cuenta</h2>
+                    <p class="text-slate-400 text-xs sm:text-sm mt-2" data-i18n="register_subtitle">Únete a la red de exploradores</p>
+                </div>
+                <form id="registerForm" class="space-y-3 sm:space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-fuchsia-400 uppercase tracking-widest mb-2 ml-1" data-i18n="register_email">Email</label>
+                        <input type="email" id="registerEmail" data-i18n-placeholder="register_email" placeholder="explorador@mundo.com" required
+                        class="w-full bg-slate-900/50 border border-white/10 rounded-2xl py-3 sm:py-4 px-4 sm:px-6 text-white focus:border-fuchsia-500 outline-none transition-all placeholder:text-slate-600 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-fuchsia-400 uppercase tracking-widest mb-2 ml-1" data-i18n="register_user">Usuario</label>
+                        <input type="text" id="registerUsername" data-i18n-placeholder="register_user" placeholder="Tu username" required
+                        class="w-full bg-slate-900/50 border border-white/10 rounded-2xl py-3 sm:py-4 px-4 sm:px-6 text-white focus:border-fuchsia-500 outline-none transition-all placeholder:text-slate-600 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-fuchsia-400 uppercase tracking-widest mb-2 ml-1" data-i18n="register_password">Contraseña</label>
+                        <input type="password" id="registerPassword" data-i18n-placeholder="register_password" placeholder="Mínimo 6 caracteres" required
+                        class="w-full bg-slate-900/50 border border-white/10 rounded-2xl py-3 sm:py-4 px-4 sm:px-6 text-white focus:border-fuchsia-500 outline-none transition-all placeholder:text-slate-600 text-sm">
+                    </div>
+                    <button type="submit" class="w-full py-3 sm:py-4 rounded-2xl bg-gradient-to-r from-fuchsia-600 to-violet-600 font-bold text-xs uppercase tracking-widest text-white hover:scale-[1.02] active:scale-95 transition-all mt-2 shadow-lg shadow-fuchsia-500/20" data-i18n="register_button">
+                        Registrarme
+                    </button>
+                    <p class="text-center text-[10px] text-slate-500 uppercase tracking-tighter mt-3 sm:mt-4">
+                        <span data-i18n="register_has">¿Ya tienes cuenta?</span> <button type="button" onclick="cambiarVista('login')" class="text-fuchsia-400 hover:underline" data-i18n="register_login">Inicia sesión</button>
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="env-config.js"></script>
+    <script>
+        var API_BASE = window.API_BASE || "http://127.0.0.1:5000";
+
+        // i18n
+        const i18n = {
+            es: {
+                nav_explorar: "Explorar", nav_favoritos: "Favoritos", nav_usd_today: "USD Hoy", nav_session: "Sesión",
+                hero_badge: "v2.0 Enciclopedia Global",
+                hero_title: "El mundo entero, <br> en alta resolución.",
+                hero_search: "Escribe el nombre de un país (ej: mexico)...",
+                region_americas: "América", region_europe: "Europa", region_africa: "África", region_asia: "Asia", region_oceania: "Oceanía",
+                section_title: "Explorar Países", section_desc: "Resultados globales en tiempo real", paises_en: "Países en",
+                empty_search: "Comienza a escribir en el buscador para explorar...",
+                search_min: "Escribe al menos 2 caracteres para buscar...",
+                not_found: "No se encontraron países con ese nombre.",
+                error_search: "Error al buscar. Intenta de nuevo.",
+                loading_text: "Cargando...",
+                modal_close: "Cerrar Ventana", modal_close_compare: "Cerrar Comparación", modal_close_exchange: "Cerrar",
+                login_title: "Acceso Explorer", login_subtitle: "Gestiona tus descubrimientos globales",
+                login_user: "Usuario", login_password: "Contraseña", login_button: "Entrar al Sistema",
+                login_no: "¿No tienes cuenta?", login_signup: "Regístrate aquí",
+                register_title: "Crear Cuenta", register_subtitle: "Únete a la red de exploradores",
+                register_email: "Email", register_user: "Usuario", register_password: "Contraseña",
+                register_button: "Registrarme", register_has: "¿Ya tienes cuenta?", register_login: "Inicia sesión",
+                fav_title: "Tus Favoritos", fav_desc: "Países guardados",
+                fav_empty: "No tienes favoritos guardados aún.",
+                fav_saved: "guardado en favoritos.",
+                fav_login: "Debes iniciar sesión para guardar favoritos",
+                travel_title: "Consejos para Viajeros",
+                travel_visa: "Visa:", travel_visa_yes: "Requerida", travel_visa_no: "No requerida",
+                travel_plug: "Enchufe:", travel_water: "Agua potable:", travel_water_yes: "Sí", travel_water_no: "No",
+                travel_safety: "Nivel:", travel_best: "Mejor época:", travel_attractions: "Atracciones destacadas:",
+                compare_title: "Comparación de Gastos",
+                compare_subtitle: "Comparativa de costo de vida y gastos diarios",
+                compare_base: "País de origen (base)", compare_select: "Selecciona un país base",
+                compare_loading: "Cargando comparación...",
+                compare_origin: "País base", compare_target: "País a comparar",
+                compare_more_expensive: "es más caro que",
+                compare_cheaper: "es más económico que",
+                compare_similar: "Ambos países tienen costo de vida similar",
+                exchange_title: "Tipo de Cambio USD",
+                exchange_subtitle: "Cotización del dólar frente a otras monedas",
+                exchange_loading: "Obteniendo cotizaciones...",
+                exchange_unavailable: "No se pudo obtener información de cambio.",
+                exchange_note: "Cotización aproximada del día",
+                map_title: "Ubicación Geográfica",
+                hora_local: "Hora Local", clima_actual: "Clima Actual",
+                valor_divisa: "Valor Divisa", poblacion: "Población", capital: "Capital",
+                no_disponible: "No disponible", error_conexion: "Error de conexión",
+                feels_like: "Sensación",
+                sesion_expirada: "Sesión expirada. Por favor inicia sesión nuevamente.",
+                bienvenido: "Bienvenido", registro_exitoso: "Registro exitoso. Bienvenido",
+                cerrar_sesion: "¿Cerrar sesión?", sesion_cerrada: "Has cerrado sesión correctamente",
+                error_sincronizar: "Error al sincronizar datos",
+                error_conectar_db: "Error al conectar con la base de datos.",
+                error_guardar: "Error al guardar.", error_region: "Error al cargar la región.", error_login: "Error en inicio de sesión", error_register: "Error en registro",
+                news_title: "Noticias Recientes", news_from: "Fuente:", news_read_more: "Leer más",
+                news_no_results: "Sin noticias disponibles", news_error: "Error al cargar noticias",
+                populares_label: "Populares:",
+                currency_label: "Moneda", compare_expenses_in: "Gastos en", compare_food: "Comida diaria", compare_transport: "Transporte", compare_accommodation: "Alojamiento/día", compare_entertainment: "Entretenimiento", compare_utilities: "Servicios", compare_daily_total: "Total diario", compare_error: "No se pudieron obtener los datos de uno de los países",
+                unknown_region: "Mundo", details_btn: "Detalles", compare_btn: "Comparar",
+                page_title: "CountryPedia | Explorador Global",
+                compare_error_label: "Error al cargar comparación", compare_select_instruction: "Selecciona un país base para ver la comparación",
+                chart_cost_title: "Costo en USD",
+            },
+            en: {
+                nav_explorar: "Explore", nav_favoritos: "Favorites", nav_usd_today: "USD Today", nav_session: "Login",
+                hero_badge: "v2.0 Global Encyclopedia",
+                hero_title: "The whole world, <br> in high resolution.",
+                hero_search: "Type a country name (e.g. mexico)...",
+                region_americas: "Americas", region_europe: "Europe", region_africa: "Africa", region_asia: "Asia", region_oceania: "Oceania",
+                section_title: "Explore Countries", section_desc: "Global results in real time", paises_en: "Countries in",
+                empty_search: "Start typing in the search bar to explore...",
+                search_min: "Type at least 2 characters to search...",
+                not_found: "No countries found with that name.",
+                error_search: "Error searching. Try again.",
+                loading_text: "Loading...",
+                modal_close: "Close Window", modal_close_compare: "Close Comparison", modal_close_exchange: "Close",
+                login_title: "Explorer Access", login_subtitle: "Manage your global discoveries",
+                login_user: "Username", login_password: "Password", login_button: "Sign In",
+                login_no: "Don't have an account?", login_signup: "Sign up here",
+                register_title: "Create Account", register_subtitle: "Join the explorer network",
+                register_email: "Email", register_user: "Username", register_password: "Password",
+                register_button: "Register", register_has: "Already have an account?", register_login: "Log in",
+                fav_title: "Your Favorites", fav_desc: "Saved countries",
+                fav_empty: "You don't have any favorites yet.",
+                fav_saved: "saved to favorites.",
+                fav_login: "You must log in to save favorites",
+                travel_title: "Travel Tips",
+                travel_visa: "Visa:", travel_visa_yes: "Required", travel_visa_no: "Not required",
+                travel_plug: "Plug:", travel_water: "Drinking water:", travel_water_yes: "Safe", travel_water_no: "Unsafe",
+                travel_safety: "Level:", travel_best: "Best time:", travel_attractions: "Top attractions:",
+                compare_title: "Expense Comparison",
+                compare_subtitle: "Cost of living and daily expenses comparison",
+                compare_base: "Home country (base)", compare_select: "Select a base country",
+                compare_loading: "Loading comparison...",
+                compare_origin: "Base country", compare_target: "Country to compare",
+                compare_more_expensive: "is more expensive than",
+                compare_cheaper: "is cheaper than",
+                compare_similar: "Both countries have similar cost of living",
+                exchange_title: "USD Exchange Rate",
+                exchange_subtitle: "Dollar exchange rates against other currencies",
+                exchange_loading: "Getting exchange rates...",
+                exchange_unavailable: "Could not get exchange rate information.",
+                exchange_note: "Approximate daily rate",
+                map_title: "Geographic Location",
+                hora_local: "Local Time", clima_actual: "Current Weather",
+                valor_divisa: "Currency Value", poblacion: "Population", capital: "Capital",
+                no_disponible: "Not available", error_conexion: "Connection error",
+                sesion_expirada: "Session expired. Please log in again.",
+                bienvenido: "Welcome", registro_exitoso: "Registration successful. Welcome",
+                cerrar_sesion: "Close session?", sesion_cerrada: "You have logged out successfully",
+                error_sincronizar: "Error syncing data",
+                error_conectar_db: "Error connecting to database.",
+                error_guardar: "Error saving.", error_region: "Error loading region.", error_login: "Login error", error_register: "Registration error",
+                news_title: "Latest News", news_from: "Source:", news_read_more: "Read more",
+                news_no_results: "No news available", news_error: "Error loading news",
+                populares_label: "Popular:",
+                feels_like: "Feels like",
+                currency_label: "Currency", compare_expenses_in: "Expenses in", compare_food: "Daily food", compare_transport: "Transport", compare_accommodation: "Accommodation/night", compare_entertainment: "Entertainment", compare_utilities: "Utilities", compare_daily_total: "Daily total", compare_error: "Could not get data for one of the countries",
+                unknown_region: "World", details_btn: "Details", compare_btn: "Compare",
+                page_title: "CountryPedia | Global Explorer",
+                compare_error_label: "Error loading comparison", compare_select_instruction: "Select a base country to see comparison",
+                chart_cost_title: "Cost in USD",
+            }
+        };
+        let currentLang = localStorage.getItem('i18n_lang') || 'es';
+        function t(key) {
+            return i18n[currentLang]?.[key] || i18n['es']?.[key] || key;
+        }
+        function setLang(lang) {
+            currentLang = lang;
+            localStorage.setItem('i18n_lang', lang);
+            document.getElementById('langBtnEs')?.classList.toggle('text-violet-400', lang === 'es');
+            document.getElementById('langBtnEn')?.classList.toggle('text-violet-400', lang === 'en');
+            document.getElementById('langBtnEs')?.classList.toggle('text-slate-500', lang !== 'es');
+            document.getElementById('langBtnEn')?.classList.toggle('text-slate-500', lang !== 'en');
+            document.getElementById('langBtnEsMob')?.classList.toggle('text-violet-400', lang === 'es');
+            document.getElementById('langBtnEnMob')?.classList.toggle('text-violet-400', lang === 'en');
+            document.getElementById('langBtnEsMob')?.classList.toggle('text-slate-500', lang !== 'es');
+            document.getElementById('langBtnEnMob')?.classList.toggle('text-slate-500', lang !== 'en');
+            updateStaticUI();
+        }
+        
+        function showToast(message, type = 'info', duration = 3500) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.innerText = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('toast-removing');
+                setTimeout(() => toast.remove(), 250);
+            }, duration);
+        }
+        
+        function updateStaticUI() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                el.innerHTML = t(el.dataset.i18n);
+            });
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                el.placeholder = t(el.dataset.i18nPlaceholder);
+            });
+            actualizarBotonSesion();
+            document.getElementById('section-title').innerText = t('section_title');
+            document.getElementById('section-desc').innerText = t('section_desc');
+        }
+        const searchInput = document.getElementById('search');
+        const grid = document.getElementById('grid-paises');
+        const loading = document.getElementById('loading');
+
+        let comparacionChart = null;
+        let countryMap = null;
+        let currentTargetCountry = null;
+        let allCountriesList = [];
+        
+        let accessToken = localStorage.getItem('accessToken');
+        let refreshToken = localStorage.getItem('refreshToken');
+        let currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+        
+        function actualizarBotonSesion() {
+            const texto = currentUser ? currentUser.username : t('nav_session');
+            document.getElementById('authButtonText').innerText = texto;
+            const mobileAuthBtn = document.querySelector('#mobileMenu .btn-neon span');
+            if (mobileAuthBtn) mobileAuthBtn.innerText = texto;
+        }
+            
+        function setAuthData(access, refresh, user) {
+            accessToken = access;
+            refreshToken = refresh;
+            currentUser = user;
+            localStorage.setItem('accessToken', access);
+            localStorage.setItem('refreshToken', refresh);
+            localStorage.setItem('currentUser', JSON.stringify(user));
+            actualizarBotonSesion();
+        }
+        
+        async function logout() {
+            if (refreshToken) {
+                try {
+                    await fetch(`${API_BASE}/api/logout`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ refresh_token: refreshToken, access_token: accessToken })
+                    });
+                } catch(e) { console.log('Error en logout backend', e); }
+            }
+            accessToken = null;
+            refreshToken = null;    
+            currentUser = null;
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('currentUser');
+            actualizarBotonSesion();
+            showToast(t('sesion_cerrada'), 'info');
+        }
+        
+        async function refreshAccessToken() {
+            if (!refreshToken) return null;
+            try {
+                    const res = await fetch(`${API_BASE}/api/refresh`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ refresh_token: refreshToken })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    accessToken = data.access_token;
+                    localStorage.setItem('accessToken', accessToken);
+                    return accessToken;
+                } else {
+                    await logout();
+                    return null;
+                }
+            } catch (err) {
+                console.error('Error renovando token', err);
+                await logout();
+                return null;
+            }
+        }
+        
+        async function authFetch(url, options = {}) {
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+    if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+    let response = await fetch(url, { ...options, headers });
+    
+    if (response.status === 401) {
+        const newToken = await refreshAccessToken();
+        if (newToken) {
+            headers['Authorization'] = `Bearer ${newToken}`;
+            response = await fetch(url, { ...options, headers });
+            } else {
+                showToast(t('sesion_expirada'), 'warning');
+                manejarSesion();
+            }
+    }
+    return response;
+}
+        async function login(username, password) {
+            try {
+                const res = await fetch(`${API_BASE}/api/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    setAuthData(data.access_token, data.refresh_token, data.user);
+                    cerrarSesion();
+                    showToast(`${t('bienvenido')} ${currentUser.username}!`, 'success');
+                    return true;
+                } else {
+                    showToast(data.error || t('error_login'), 'error');
+                    return false;
+                }
+            } catch (err) {
+                showToast(t('error_conexion'), 'error');
+                return false;
+            }
+        }
+        
+        // Registro
+        async function register(email, username, password) {
+            try {
+                const res = await fetch(`${API_BASE}/api/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, username, password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    setAuthData(data.access_token, data.refresh_token, data.user);
+                    cerrarSesion();
+                    showToast(`${t('registro_exitoso')} ${currentUser.username}!`, 'success');
+                    return true;
+                } else {
+                    showToast(data.error || t('error_register'), 'error');
+                    return false;
+                }
+            } catch (err) {
+                showToast(t('error_conexion'), 'error');
+                return false;
+            }
+        }
+        
+        function manejarSesion() {
+            if (accessToken && currentUser) {
+                if (confirm(t('cerrar_sesion'))) {
+                    logout();
+                }
+            } else {
+                cambiarVista('login');
+                document.getElementById('modal-sesion').classList.remove('hidden');
+            }
+        }
+        
+       
+        async function toggleFavorite(country) {
+            if (!accessToken) {
+                showToast(t('fav_login'), 'warning');
+                manejarSesion();
+                return;
+            }
+            try {
+                const res = await authFetch(`${API_BASE}/api/favoritos`, {
+                    method: 'POST',
+                    body: JSON.stringify(country)
+                });
+                if (res.ok) {
+                    showToast(`⭐ ${country.name.common} ${t('fav_saved')}`, 'success');
+                } else {
+                    const data = await res.json();
+                    showToast(data.error || t('error_guardar'), 'error');
+                }
+            } catch (err) {
+                showToast(t('error_guardar'), 'error');
+            }
+        }
+        
+        async function verFavoritos() {
+            if (!accessToken) {
+                showToast(t('fav_login'), 'warning');
+                manejarSesion();
+                return;
+            }
+            grid.innerHTML = '';
+            loading.classList.remove('hidden');
+            document.getElementById('section-title').innerText = t('fav_title');
+            document.getElementById('section-desc').innerText = t('fav_desc');
+            try {
+                const res = await authFetch(`${API_BASE}/api/favoritos`);
+                const favs = await res.json();
+                loading.classList.add('hidden');
+                if (favs.length === 0) {
+                    grid.innerHTML = `<p class="col-span-full text-center py-10 text-slate-500">${t('fav_empty')}</p>`;
+                } else {
+                    grid.innerHTML = favs.map(c => createCountryCard(c)).join('');
+                }
+            } catch (err) { 
+                loading.classList.add('hidden');
+                showToast(t('error_conectar_db'), 'error');
+            }
+        }
+        
+        function getLocalTimeFromTimezone(timezoneStr) {
+            try {
+                if (!timezoneStr.includes('UTC') && !timezoneStr.includes('GMT')) {
+                    const now = new Date();
+                    const options = { timeZone: timezoneStr, hour: '2-digit', minute: '2-digit' };
+                    return new Intl.DateTimeFormat('es-ES', options).format(now);
+                }
+                const match = timezoneStr.match(/UTC([+-]\d{1,2})(?::(\d{2}))?/);
+                if (match) {
+                    let horas = parseInt(match[1], 10);
+                    let minutos = match[2] ? parseInt(match[2], 10) : 0;
+                    let offset = horas * 3600 + minutos * 60;
+                    const ahora = new Date();
+                    const utc = ahora.getTime() + (ahora.getTimezoneOffset() * 60000);
+                    const horaLocal = new Date(utc + (offset * 1000));
+                    return horaLocal.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                }
+                return t('no_disponible');
+            } catch (e) {
+                return t('no_disponible');
+            }
+        }
+        
+       async function verDetalles(name) {
+    const modal = document.getElementById('modal-detalles');
+    const content = document.getElementById('modal-content');
+    content.innerHTML = `
+        <div class="animate-pulse space-y-4 p-4">
+            <div class="h-32 sm:h-40 bg-white/5 rounded-3xl"></div>
+            <div class="h-6 bg-white/10 rounded w-1/2 mx-auto"></div>
+            <div class="h-4 bg-white/10 rounded w-3/4 mx-auto"></div>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="h-20 bg-white/5 rounded-2xl"></div>
+                <div class="h-20 bg-white/5 rounded-2xl"></div>
+            </div>
+            <div class="h-20 bg-white/5 rounded-2xl"></div>
+        </div>
+    `;
+    
+    try {
+        const url = `${API_BASE}/api/buscar/${encodeURIComponent(name)}`;
+        const resPais = await fetch(url);
+        if (!resPais.ok) throw new Error(`HTTP ${resPais.status}`);
+        const dataPais = await resPais.json();
+        if (!Array.isArray(dataPais) || dataPais.length === 0) throw new Error(t('no_disponible'));
+        const country = dataPais[0];
+
+        const flagUrl = country.flags?.svg || country.flags?.png || '';
+        const currencyKey = country.currencies ? Object.keys(country.currencies)[0] : null;
+        const currencyName = currencyKey ? country.currencies[currencyKey].name : t('no_disponible');
+        
+        let infoCambio = t('no_disponible');
+        if (currencyKey) {
+            try {
+                const resCambio = await fetch(`${API_BASE}/api/cambio/${currencyKey}`);
+                const dataCambio = await resCambio.json();
+                if (dataCambio.tasa && dataCambio.tasa !== "N/A") {
+                    infoCambio = `1 USD = ${dataCambio.tasa.toFixed(2)} ${currencyKey}`;
+                }
+            } catch (e) {}
+        }
+
+        let travelInfo = null;
+        try {
+            const resTravel = await fetch(`${API_BASE}/api/travel-advisory/${encodeURIComponent(country.name.common)}`);
+            if (resTravel.ok) {
+                travelInfo = await resTravel.json();
+            }
+        } catch (e) { console.log("Error en travel advisory", e); }
+
+        let weatherInfo = null;
+        try {
+            const resWeather = await fetch(`${API_BASE}/api/weather/${encodeURIComponent(country.name.common)}`);
+            if (resWeather.ok) {
+                weatherInfo = await resWeather.json();
+            } else {
+                console.log("Clima no disponible para este país");
+            }
+        } catch (e) { console.log("Error obteniendo clima", e); }
+
+        let horaFormateada = t('no_disponible');
+        let tzDisplay = t('no_disponible');
+        if (country.timezones && country.timezones.length > 0) {
+            tzDisplay = country.timezones[0];
+            horaFormateada = getLocalTimeFromTimezone(tzDisplay);
+        }
+
+        let html = `
+            <div class="flex flex-col sm:flex-row items-center gap-4 sm:gap-5 mb-6 sm:mb-8">
+                <img src="${flagUrl}" class="w-20 h-12 sm:w-24 sm:h-14 object-cover rounded-xl shadow-2xl border border-white/20">
+                <div class="text-center sm:text-left">
+                    <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">${country.name.common}</h2>
+                    <span class="text-[10px] text-violet-400 font-bold uppercase tracking-[0.2em]">${country.subregion || country.region || ''}</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                <!-- Hora Local -->
+                <div class="bg-gradient-to-br from-violet-500/10 to-transparent p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-white/10 text-center">
+                    <i class="fas fa-clock text-violet-400 mb-2 text-lg sm:text-xl"></i>
+                    <p class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-widest">${t('hora_local')}</p>
+                    <p class="text-2xl sm:text-3xl font-black text-white mt-1">${horaFormateada}</p>
+                    <p class="text-[8px] sm:text-[9px] text-slate-400 mt-1 italic truncate">${tzDisplay}</p>
+                </div>
+                
+                <!-- Clima Actual (si está disponible) -->
+                ${weatherInfo ? `
+                <div class="bg-gradient-to-br from-sky-500/10 to-blue-500/10 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-white/10 text-center">
+                    <i class="fas fa-cloud-sun text-sky-400 mb-2 text-lg sm:text-xl"></i>
+                    <p class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-widest">${t('clima_actual')}</p>
+                    <p class="text-2xl sm:text-3xl font-black text-white mt-1">${weatherInfo.temp}°C</p>
+                    <p class="text-xs text-slate-300 mt-1">${weatherInfo.description}</p>
+                    <div class="flex justify-center gap-3 mt-2 text-xs">
+                        <span>💨 ${weatherInfo.wind_speed} m/s</span>
+                        <span>💧 ${weatherInfo.humidity}%</span>
+                    </div>
+                    <p class="text-[9px] text-slate-400 mt-1">${t('feels_like')}: ${weatherInfo.feels_like}°C</p>
+                </div>
+                ` : `
+                <div class="bg-gradient-to-br from-emerald-500/10 to-transparent p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-white/10 text-center">
+                    <i class="fas fa-hand-holding-dollar text-emerald-400 mb-2 text-lg sm:text-xl"></i>
+                    <p class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-widest">${t('valor_divisa')}</p>
+                    <p class="text-base sm:text-xl font-black text-white mt-1">${infoCambio}</p>
+                    <p class="text-[9px] sm:text-[10px] text-emerald-300/70 font-medium uppercase mt-1">${currencyName}</p>
+                </div>
+                `}
+            </div>
+
+            <!-- Si no se mostró el clima en la segunda columna, mostramos la divisa aquí -->
+            ${!weatherInfo ? `
+            <div class="mt-3 sm:mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                <div class="bg-gradient-to-br from-emerald-500/10 to-transparent p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-white/10 text-center md:col-span-2">
+                    <i class="fas fa-hand-holding-dollar text-emerald-400 mb-2 text-lg sm:text-xl"></i>
+                    <p class="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold tracking-widest">${t('valor_divisa')}</p>
+                    <p class="text-base sm:text-xl font-black text-white mt-1">${infoCambio}</p>
+                    <p class="text-[9px] sm:text-[10px] text-emerald-300/70 font-medium uppercase mt-1">${currencyName}</p>
+                </div>
+            </div>
+            ` : ''}
+
+            <div class="mt-5 sm:mt-6 p-3 sm:p-4 bg-white/5 rounded-xl sm:rounded-2xl border border-white/5 flex justify-around items-center text-sm">
+                <div class="text-center">
+                    <p class="text-[8px] sm:text-[9px] text-slate-500 uppercase font-bold">${t('poblacion')}</p>
+                    <p class="text-xs sm:text-sm font-bold text-white">${country.population ? country.population.toLocaleString() : t('no_disponible')}</p>
+                </div>
+                <div class="h-6 sm:h-8 w-px bg-white/10"></div>
+                <div class="text-center">
+                    <p class="text-[8px] sm:text-[9px] text-slate-500 uppercase font-bold">${t('capital')}</p>
+                    <p class="text-xs sm:text-sm font-bold text-white">${country.capital ? country.capital[0] : t('no_disponible')}</p>
+                </div>
+            </div>
+        `;
+
+        if (travelInfo) {
+            html += `
+            <div class="mt-5 p-4 bg-gradient-to-r from-amber-500/10 to-orange-500/10 rounded-2xl border border-amber-500/30">
+                <h3 class="text-sm font-bold text-amber-400 mb-2 flex items-center gap-2">
+                    <i class="fas fa-traffic-light"></i> ${t('travel_title')}
+                </h3>
+                <div class="grid grid-cols-2 gap-3 text-xs">
+                    <div>🛂 ${t('travel_visa')} ${travelInfo.visa_required === true ? t('travel_visa_yes') : (travelInfo.visa_required === false ? t('travel_visa_no') : travelInfo.visa_required)}</div>
+                    <div>🔌 ${t('travel_plug')} ${travelInfo.plug_type}</div>
+                    <div>💧 ${t('travel_water')} ${travelInfo.water_safe === true ? t('travel_water_yes') : (travelInfo.water_safe === false ? t('travel_water_no') : travelInfo.water_safe)}</div>
+                    <div>⚠️ ${t('travel_safety')} ${travelInfo.signal} ${travelInfo.safety_level?.toUpperCase()}</div>
+                    <div class="col-span-2">📅 ${t('travel_best')} ${travelInfo.best_time || t('no_disponible')}</div>
+                </div>
+                <div class="mt-2">
+                    <p class="text-xs font-semibold text-amber-300">📍 ${t('travel_attractions')}</p>
+                    <p class="text-xs text-slate-300">${travelInfo.attractions ? travelInfo.attractions.join(" • ") : t('no_disponible')}</p>
+                </div>
+                <p class="text-xs text-slate-300 mt-2">${travelInfo.details}</p>
+            </div>
+            `;
+        }
+
+        let newsHtml = '';
+        try {
+            const resNews = await fetch(`${API_BASE}/api/noticias/${encodeURIComponent(country.name.common)}?language=${currentLang}`);
+            if (resNews.ok) {
+                const newsData = await resNews.json();
+                if (newsData.articles && newsData.articles.length > 0) {
+                    newsHtml = `
+                    <div class="mt-5 p-4 bg-gradient-to-r from-sky-500/10 to-indigo-500/10 rounded-2xl border border-sky-500/30">
+                        <h3 class="text-sm font-bold text-sky-400 mb-3 flex items-center gap-2">
+                            <i class="fas fa-newspaper"></i> ${t('news_title')}
+                        </h3>
+                        <div class="space-y-3">
+                            ${newsData.articles.slice(0, 3).map(art => `
+                            <div class="bg-white/5 p-3 rounded-xl border border-white/10">
+                                <p class="text-xs font-semibold text-white leading-tight">${art.title}</p>
+                                ${art.description ? `<p class="text-[10px] text-slate-400 mt-1 line-clamp-2">${art.description}</p>` : ''}
+                                <div class="flex justify-between items-center mt-2">
+                                    <span class="text-[9px] text-slate-500">${t('news_from')} ${art.source || t('no_disponible')}</span>
+                                    <a href="${art.url}" target="_blank" class="text-[10px] text-sky-400 hover:underline">${t('news_read_more')} →</a>
+                                </div>
+                            </div>
+                            `).join('')}
+                        </div>
+                    </div>`;
+                } else {
+                    newsHtml = `<div class="mt-5 p-4 bg-white/5 rounded-2xl border border-white/10 text-center text-xs text-slate-500">${t('news_no_results')}</div>`;
+                }
+            }
+        } catch(e) {
+            console.log("Error en noticias:", e);
+            newsHtml = `<div class="mt-5 p-4 bg-white/5 rounded-2xl border border-white/10 text-center text-xs text-slate-500">${t('news_error')}</div>`;
+        }
+
+        html += newsHtml;
+
+        const lat = country.latlng ? country.latlng[0] : null;
+        const lng = country.latlng ? country.latlng[1] : null;
+        if (lat && lng) {
+            html += `
+            <div class="mt-5">
+                <h3 class="text-xs font-bold text-violet-400 mb-3 flex items-center gap-2 uppercase tracking-widest">
+                    <i class="fas fa-map-marked-alt"></i> ${t('map_title')}
+                </h3>
+                <div id="map" class="border border-white/10 shadow-xl"></div>
+            </div>
+            `;
+        }
+
+        content.innerHTML = html;
+        modal.classList.remove('hidden');
+
+        if (lat && lng) {
+            setTimeout(() => {
+                const mapEl = document.getElementById('map');
+                if (mapEl && !countryMap) {
+                    countryMap = L.map('map', {
+                        center: [lat, lng],
+                        zoom: 4,
+                        zoomControl: true
+                    });
+
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+                        subdomains: 'abcd',
+                        maxZoom: 19
+                    }).addTo(countryMap);
+
+                    L.marker([lat, lng])
+                        .addTo(countryMap)
+                        .bindPopup(`<b>${country.name.common}</b><br>${country.capital ? country.capital[0] : ''}`)
+                        .openPopup();
+
+                    setTimeout(() => countryMap.invalidateSize(), 300);
+                }
+            }, 200);
+        }
+    } catch (err) { 
+        console.error('Error en verDetalles:', err);
+        showToast(`${t('error_sincronizar')}: ${err.message}`, 'error');
+    }
+}
+        
+        async function cargarListaPaises() {
+            try {
+                const response = await fetch(`${API_BASE}/api/paises`);
+                const data = await response.json();
+                allCountriesList = data.sort((a, b) => a.name.common.localeCompare(b.name.common));
+                
+                const select = document.getElementById('baseCountrySelect');
+                select.innerHTML = `<option value="">${t('compare_select')}</option>`;
+                
+                const datalist = document.getElementById('country-list');
+                datalist.innerHTML = '';
+                
+                allCountriesList.forEach(country => {
+                    const option = document.createElement('option');
+                    option.value = country.name.common;
+                    option.textContent = country.name.common;
+                    select.appendChild(option);
+                    
+                    const datalistOption = document.createElement('option');
+                    datalistOption.value = country.name.common;
+                    datalist.appendChild(datalistOption);
+                });
+                
+                if (allCountriesList.some(c => c.name.common === 'Mexico')) {
+                    select.value = 'Mexico';
+                } else if (allCountriesList.length > 0) {
+                    select.value = allCountriesList[0].name.common;
+                }
+                if (currentTargetCountry) {
+                    actualizarComparacion();
+                }
+            } catch (err) {
+                console.error('Error cargando países:', err);
+                document.getElementById('baseCountrySelect').innerHTML = `<option value="">${t('error_region')}</option>`;
+            }
+        }
+        
+        async function buscarPaises(query) {
+    if (!query || query.length < 2) return [];
+    try {
+        // Llama a tu propio endpoint /api/buscar/
+        const res = await fetch(`${API_BASE}/api/buscar/${encodeURIComponent(query)}`);
+        if (!res.ok) {
+            if (res.status === 404) return [];
+            throw new Error(`HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        // El endpoint devuelve un array con un solo país (o varios si hubiera coincidencias)
+        // Pero la estructura esperada por createCountryCard es un array de países
+        return Array.isArray(data) ? data : [data];
+    } catch (err) {
+        console.error('Error en búsqueda:', err);
+        return [];
+    }
+}
+        async function mostrarTipoCambio() {
+            const modal = document.getElementById('modal-tipo-cambio');
+            const content = document.getElementById('exchange-rates-content');
+            modal.classList.remove('hidden');
+            content.innerHTML = `<div class="text-center py-4"><i class="fas fa-circle-notch fa-spin text-violet-500"></i><p class="mt-2 text-slate-400">${t('exchange_loading')}</p></div>`;
+            
+            const currencies = ['MXN', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'BRL'];
+            const rates = [];
+            
+            for (const currency of currencies) {
+                try {
+                    const res = await fetch(`${API_BASE}/api/cambio/${currency}`);
+                    const data = await res.json();
+                    if (data.tasa && data.tasa !== "N/A") {
+                        rates.push({ currency, rate: data.tasa });
+                    } else {
+                        rates.push({ currency, rate: 'N/A' });
+                    }
+                } catch (err) {
+                    rates.push({ currency, rate: 'Error' });
+                }
+            }
+            
+            if (rates.length === 0) {
+                content.innerHTML = `<div class="text-center text-red-400">${t('exchange_unavailable')}</div>`;
+            } else {
+                content.innerHTML = `
+                    <div class="space-y-2 sm:space-y-3">
+                        ${rates.map(r => `
+                            <div class="flex justify-between items-center p-2 sm:p-3 bg-white/5 rounded-xl border border-white/10 text-xs sm:text-sm">
+                                <span class="font-bold text-white">${r.currency}</span>
+                                <span class="text-emerald-400 truncate ml-2">1 USD = ${r.rate !== 'N/A' && r.rate !== 'Error' ? r.rate.toFixed(2) : r.rate} ${r.currency}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="mt-3 sm:mt-4 p-2 sm:p-3 bg-violet-500/10 rounded-xl text-center text-[10px] sm:text-xs text-slate-400">
+                        <i class="fas fa-info-circle mr-1"></i> ${t('exchange_note')}
+                    </div>
+                `;
+            }
+        }
+        
+        function cerrarTipoCambio() {
+            document.getElementById('modal-tipo-cambio').classList.add('hidden');
+        }
+        
+        async function compararPaises(baseName, targetName) {
+            if (!baseName || !targetName) return;
+
+            const modalContent = document.getElementById('comparacion-content');
+            modalContent.innerHTML = `<div class="text-center py-10"><i class="fas fa-circle-notch fa-spin text-4xl text-violet-500"></i><p class="mt-4 text-slate-400">${t('compare_loading')}</p></div>`;
+
+            try {
+                const resBase = await fetch(`${API_BASE}/api/buscar/${baseName}`);
+                const dataBase = await resBase.json();
+                const baseCountry = dataBase[0];
+                
+                const resTarget = await fetch(`${API_BASE}/api/buscar/${targetName}`);
+                const dataTarget = await resTarget.json();
+                const targetCountry = dataTarget[0];
+
+                if (!baseCountry || !targetCountry) {
+                    throw new Error(t('compare_error'));
+                }
+
+                const currencyBase = baseCountry.currencies ? Object.keys(baseCountry.currencies)[0] : null;
+                const currencyTarget = targetCountry.currencies ? Object.keys(targetCountry.currencies)[0] : null;
+                
+                let tasaBaseUSD = 1, tasaTargetUSD = 1;
+                try {
+                    if (currencyBase) {
+                        const resCambioBase = await fetch(`${API_BASE}/api/cambio/${currencyBase}`);
+                        const dataCambioBase = await resCambioBase.json();
+                        if (dataCambioBase.tasa && dataCambioBase.tasa !== "N/A") tasaBaseUSD = 1 / dataCambioBase.tasa;
+                    }
+                    if (currencyTarget) {
+                        const resCambioTarget = await fetch(`${API_BASE}/api/cambio/${currencyTarget}`);
+                        const dataCambioTarget = await resCambioTarget.json();
+                        if (dataCambioTarget.tasa && dataCambioTarget.tasa !== "N/A") tasaTargetUSD = 1 / dataCambioTarget.tasa;
+                    }
+                } catch (e) { console.log("Error obteniendo tasas de cambio"); }
+
+                const [costBase, costTarget] = await Promise.all([
+                    fetch(`${API_BASE}/api/costo-vida/${baseName}`).then(r => r.json()).catch(() => null),
+                    fetch(`${API_BASE}/api/costo-vida/${targetName}`).then(r => r.json()).catch(() => null)
+                ]);
+
+                const factorBase = costBase?.factor || 1.0;
+                const factorTarget = costTarget?.factor || 1.0;
+
+                const gastosReferencia = {
+                    comida: 350,
+                    transporte: 120,
+                    alojamiento: 800,
+                    entretenimiento: 200,
+                    servicios: 150
+                };
+
+                const gastosBaseUSD = {};
+                const gastosTargetUSD = {};
+                for (let key in gastosReferencia) {
+                    gastosBaseUSD[key] = Math.round(gastosReferencia[key] * factorBase);
+                    gastosTargetUSD[key] = Math.round(gastosReferencia[key] * factorTarget);
+                }
+
+                const gastosBaseLocal = {};
+                const gastosTargetLocal = {};
+                if (currencyBase && tasaBaseUSD > 0) {
+                    for (let key in gastosReferencia) {
+                        gastosBaseLocal[key] = Math.round(gastosBaseUSD[key] * tasaBaseUSD);
+                    }
+                }
+                if (currencyTarget && tasaTargetUSD > 0) {
+                    for (let key in gastosReferencia) {
+                        gastosTargetLocal[key] = Math.round(gastosTargetUSD[key] * tasaTargetUSD);
+                    }
+                }
+
+                const totalBaseUSD = Object.values(gastosBaseUSD).reduce((a, b) => a + b, 0);
+                const totalTargetUSD = Object.values(gastosTargetUSD).reduce((a, b) => a + b, 0);
+                const diferencia = ((totalTargetUSD - totalBaseUSD) / totalBaseUSD * 100).toFixed(1);
+
+                modalContent.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+                        <div class="comparison-card rounded-2xl p-4 sm:p-6 text-center">
+                            <img src="${baseCountry.flags.svg}" class="w-16 h-10 sm:w-20 sm:h-12 object-cover mx-auto mb-2 sm:mb-3 rounded-lg shadow-lg">
+                            <h3 class="text-xl sm:text-2xl font-bold text-white">${baseCountry.name.common}</h3>
+                            <p class="text-xs sm:text-sm text-slate-400">${t('compare_origin')}</p>
+                            <p class="text-[10px] sm:text-xs text-violet-400 mt-2">${t('currency_label')}: ${currencyBase || t('no_disponible')}</p>
+                            ${tasaBaseUSD ? `<p class="text-[9px] sm:text-xs text-slate-500">1 USD ≈ ${tasaBaseUSD.toFixed(2)} ${currencyBase}</p>` : ''}
+                        </div>
+                        <div class="comparison-card rounded-2xl p-4 sm:p-6 text-center">
+                            <img src="${targetCountry.flags.svg}" class="w-16 h-10 sm:w-20 sm:h-12 object-cover mx-auto mb-2 sm:mb-3 rounded-lg shadow-lg">
+                            <h3 class="text-xl sm:text-2xl font-bold text-white">${targetCountry.name.common}</h3>
+                            <p class="text-xs sm:text-sm text-slate-400">${t('compare_target')}</p>
+                            <p class="text-[10px] sm:text-xs text-emerald-400 mt-2">${t('currency_label')}: ${currencyTarget || t('no_disponible')}</p>
+                            ${tasaTargetUSD ? `<p class="text-[9px] sm:text-xs text-slate-500">1 USD ≈ ${tasaTargetUSD.toFixed(2)} ${currencyTarget}</p>` : ''}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-6 sm:mb-8 p-3 sm:p-4 bg-white/5 rounded-2xl border border-white/10">
+                        <p class="text-center text-base sm:text-lg font-semibold text-white">
+                            ${diferencia > 0 ? `💰 ${targetCountry.name.common} ${t('compare_more_expensive')} ${baseCountry.name.common} <span class="text-red-400">(${diferencia}%)</span>` : 
+                              diferencia < 0 ? `💚 ${targetCountry.name.common} ${t('compare_cheaper')} ${baseCountry.name.common} <span class="text-green-400">(${Math.abs(diferencia)}%)</span>` : 
+                              `📊 ${t('compare_similar')}`}
+                        </p>
+                    </div>
+                    
+                    <div class="bg-white/5 rounded-2xl p-2 sm:p-4">
+                        <canvas id="comparisonChart" class="w-full h-48 sm:h-64"></canvas>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-8 mt-5 sm:mt-6 text-xs sm:text-sm">
+                        <div class="space-y-2">
+                            <h4 class="font-bold text-violet-400 mb-2 sm:mb-3 text-xs sm:text-sm">${t('compare_expenses_in')} ${baseCountry.name.common}</h4>
+                            <div class="flex justify-between"><span>🍽️ ${t('compare_food')}:</span><span class="font-bold">$${gastosBaseUSD.comida} USD ${gastosBaseLocal.comida ? `(${gastosBaseLocal.comida} ${currencyBase})` : ''}</span></div>
+                            <div class="flex justify-between"><span>🚗 ${t('compare_transport')}:</span><span class="font-bold">$${gastosBaseUSD.transporte} USD ${gastosBaseLocal.transporte ? `(${gastosBaseLocal.transporte} ${currencyBase})` : ''}</span></div>
+                            <div class="flex justify-between"><span>🏨 ${t('compare_accommodation')}:</span><span class="font-bold">$${gastosBaseUSD.alojamiento} USD ${gastosBaseLocal.alojamiento ? `(${gastosBaseLocal.alojamiento} ${currencyBase})` : ''}</span></div>
+                            <div class="flex justify-between"><span>🎭 ${t('compare_entertainment')}:</span><span class="font-bold">$${gastosBaseUSD.entretenimiento} USD ${gastosBaseLocal.entretenimiento ? `(${gastosBaseLocal.entretenimiento} ${currencyBase})` : ''}</span></div>
+                            <div class="flex justify-between"><span>💡 ${t('compare_utilities')}:</span><span class="font-bold">$${gastosBaseUSD.servicios} USD ${gastosBaseLocal.servicios ? `(${gastosBaseLocal.servicios} ${currencyBase})` : ''}</span></div>
+                            <div class="flex justify-between pt-2 border-t border-white/10"><span class="font-bold">${t('compare_daily_total')}:</span><span class="font-bold text-violet-400">$${totalBaseUSD} USD</span></div>
+                        </div>
+                        <div class="space-y-2">
+                            <h4 class="font-bold text-emerald-400 mb-2 sm:mb-3 text-xs sm:text-sm">${t('compare_expenses_in')} ${targetCountry.name.common}</h4>
+                            <div class="flex justify-between"><span>🍽️ ${t('compare_food')}:</span><span class="font-bold">$${gastosTargetUSD.comida} USD ${gastosTargetLocal.comida ? `(${gastosTargetLocal.comida} ${currencyTarget})` : ''}</span></div>
+                            <div class="flex justify-between"><span>🚗 ${t('compare_transport')}:</span><span class="font-bold">$${gastosTargetUSD.transporte} USD ${gastosTargetLocal.transporte ? `(${gastosTargetLocal.transporte} ${currencyTarget})` : ''}</span></div>
+                            <div class="flex justify-between"><span>🏨 ${t('compare_accommodation')}:</span><span class="font-bold">$${gastosTargetUSD.alojamiento} USD ${gastosTargetLocal.alojamiento ? `(${gastosTargetLocal.alojamiento} ${currencyTarget})` : ''}</span></div>
+                            <div class="flex justify-between"><span>🎭 ${t('compare_entertainment')}:</span><span class="font-bold">$${gastosTargetUSD.entretenimiento} USD ${gastosTargetLocal.entretenimiento ? `(${gastosTargetLocal.entretenimiento} ${currencyTarget})` : ''}</span></div>
+                            <div class="flex justify-between"><span>💡 ${t('compare_utilities')}:</span><span class="font-bold">$${gastosTargetUSD.servicios} USD ${gastosTargetLocal.servicios ? `(${gastosTargetLocal.servicios} ${currencyTarget})` : ''}</span></div>
+                            <div class="flex justify-between pt-2 border-t border-white/10"><span class="font-bold">${t('compare_daily_total')}:</span><span class="font-bold text-emerald-400">$${totalTargetUSD} USD</span></div>
+                        </div>
+                    </div>
+                `;
+
+                setTimeout(() => {
+                    const ctx = document.getElementById('comparisonChart').getContext('2d');
+                    if (comparacionChart) comparacionChart.destroy();
+                    comparacionChart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: [t('compare_food'), t('compare_transport'), t('compare_accommodation'), t('compare_entertainment'), t('compare_utilities')],
+                            datasets: [
+                                {
+                                    label: baseCountry.name.common,
+                                    data: [gastosBaseUSD.comida, gastosBaseUSD.transporte, gastosBaseUSD.alojamiento, gastosBaseUSD.entretenimiento, gastosBaseUSD.servicios],
+                                    backgroundColor: 'rgba(139, 92, 246, 0.7)',
+                                    borderColor: 'rgba(139, 92, 246, 1)',
+                                    borderWidth: 1
+                                },
+                                {
+                                    label: targetCountry.name.common,
+                                    data: [gastosTargetUSD.comida, gastosTargetUSD.transporte, gastosTargetUSD.alojamiento, gastosTargetUSD.entretenimiento, gastosTargetUSD.servicios],
+                                    backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                                    borderColor: 'rgba(16, 185, 129, 1)',
+                                    borderWidth: 1
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: {
+                                legend: { labels: { color: 'white', font: { size: window.innerWidth < 640 ? 10 : 12 } } },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            return `${context.dataset.label}: $${context.raw} USD`;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: { ticks: { color: 'white', font: { size: window.innerWidth < 640 ? 10 : 12 } }, title: { display: true, text: t('chart_cost_title'), color: 'white', font: { size: window.innerWidth < 640 ? 10 : 12 } } },
+                                x: { ticks: { color: 'white', font: { size: window.innerWidth < 640 ? 10 : 12 } } }
+                            }
+                        }
+                    });
+                }, 100);
+            } catch (err) {
+                console.error(err);
+                modalContent.innerHTML = `<div class="text-center py-10 text-red-400"><i class="fas fa-exclamation-triangle text-3xl"></i><p class="mt-4">${t('compare_error_label')}: ${err.message}</p></div>`;
+            }
+        }
+        
+        async function actualizarComparacion() {
+            const baseSelect = document.getElementById('baseCountrySelect');
+            const baseName = baseSelect.value;
+            if (!baseName || !currentTargetCountry) return;
+            await compararPaises(baseName, currentTargetCountry);
+        }
+        
+        async function abrirComparacion(paisNombre) {
+            currentTargetCountry = paisNombre;
+            if (allCountriesList.length === 0) {
+                await cargarListaPaises();
+            }
+            document.getElementById('modal-comparacion').classList.remove('hidden');
+            const baseSelect = document.getElementById('baseCountrySelect');
+            if (baseSelect.value) {
+                await actualizarComparacion();
+            } else {
+                document.getElementById('comparacion-content').innerHTML = `<div class="text-center text-slate-400">${t('compare_select_instruction')}</div>`;
+            }
+        }
+        
+        function cerrarComparacion() {
+            document.getElementById('modal-comparacion').classList.add('hidden');
+            if (comparacionChart) {
+                comparacionChart.destroy();
+                comparacionChart = null;
+            }
+            currentTargetCountry = null;
+        }
+        
+        function configurarSelector() {
+            const select = document.getElementById('baseCountrySelect');
+            if (select) {
+                select.addEventListener('change', () => {
+                    if (currentTargetCountry) {
+                        actualizarComparacion();
+                    }
+                });
+            }
+        }
+        
+        async function cargarPopulares() {
+            try {
+                const res = await fetch(`${API_BASE}/api/populares`);
+                if (!res.ok) return;
+                const data = await res.json();
+                if (!data || data.length === 0) return;
+                const container = document.getElementById('populares-list');
+                const section = document.getElementById('populares-section');
+                container.innerHTML = data.map(p => `
+                    <button onclick="buscarPaisPopular('${p.pais}')" class="text-[9px] sm:text-[10px] px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:border-violet-500 transition-all">
+                        ${p.pais}
+                    </button>
+                `).join('');
+                section.classList.remove('hidden');
+            } catch(e) {
+                console.log('Error cargando populares:', e);
+            }
+        }
+        
+        async function buscarPaisPopular(nombre) {
+            searchInput.value = nombre;
+            loading.classList.remove('hidden');
+            grid.innerHTML = '';
+            document.getElementById('section-title').innerText = nombre;
+            document.getElementById('section-desc').innerText = '';
+            try {
+                const results = await buscarPaises(nombre);
+                loading.classList.add('hidden');
+                if (results.length === 0) {
+                    grid.innerHTML = `<div class="text-slate-500 col-span-full text-center py-10 italic text-sm">${t('not_found')}</div>`;
+                } else {
+                    grid.innerHTML = results.map(c => createCountryCard(c)).join('');
+                }
+            } catch (err) {
+                loading.classList.add('hidden');
+                grid.innerHTML = `<div class="text-red-400 col-span-full text-center py-10 text-sm">${t('error_search')}</div>`;
+            }
+        }
+        
+        function createCountryCard(country) {
+            const currencyKey = country.currencies ? Object.keys(country.currencies)[0] : t('no_disponible');
+            const countryJson = JSON.stringify(country).replace(/'/g, "&apos;");
+
+            return `
+            <article class="glass-card rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col fade-in">
+                <div class="relative h-40 sm:h-48 overflow-hidden">
+                    <img src="${country.flags?.svg || country.flags?.png || ''}" class="w-full h-full object-cover">
+                    <div class="absolute bottom-3 left-3">
+                        <span class="bg-white/10 backdrop-blur-md border border-white/20 px-2 py-0.5 sm:px-3 sm:py-1 rounded-lg text-[8px] sm:text-[10px] font-bold tracking-widest uppercase">${country.region || t('unknown_region')}</span>
+                    </div>
+                </div>
+                <div class="p-4 sm:p-6 flex-grow">
+                    <div class="flex justify-between items-center mb-4 sm:mb-6">
+                        <h4 class="text-lg sm:text-2xl font-extrabold text-white tracking-tight truncate">${country.name.common}</h4>
+                        <button onclick='toggleFavorite(${countryJson})' class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-red-500/20 hover:text-red-500 transition-all border border-white/10">
+                            <i class="fa-solid fa-heart text-sm sm:text-base"></i>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
+                        <div class="bg-white/5 p-2 sm:p-3 rounded-xl sm:rounded-2xl border border-white/5">
+                            <p class="text-[8px] sm:text-[10px] text-slate-500 uppercase font-bold mb-1">${t('capital')}</p>
+                            <p class="text-xs sm:text-sm font-semibold text-slate-200 truncate">${country.capital ? country.capital[0] : t('no_disponible')}</p>
+                        </div>
+                        <div class="bg-white/5 p-2 sm:p-3 rounded-xl sm:rounded-2xl border border-white/5">
+                            <p class="text-[8px] sm:text-[10px] text-slate-500 uppercase font-bold mb-1">${t('currency_label')}</p>
+                            <p class="text-xs sm:text-sm font-semibold text-slate-200">${currencyKey}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 sm:p-6 pt-0 mt-auto flex gap-2 sm:gap-3">
+                    <button onclick="verDetalles('${country.name.common}')" class="flex-1 py-2 sm:py-3 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 font-bold text-[10px] sm:text-xs uppercase tracking-widest hover:bg-white hover:text-black transition-all">
+                        ${t('details_btn')}
+                    </button>
+                    <button onclick="abrirComparacion('${country.name.common}')" class="flex-1 py-2 sm:py-3 rounded-xl sm:rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 font-bold text-[10px] sm:text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-emerald-500/20">
+                        <i class="fas fa-chart-line mr-1"></i> ${t('compare_btn')}
+                    </button>
+                </div>
+            </article>`;
+        }
+        
+        // Búsqueda con debounce
+        let debounceTimer;
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            clearTimeout(debounceTimer);
+            
+            if (query.length < 2) {
+                grid.innerHTML = `<div class="text-slate-500 col-span-full text-center py-10 italic text-sm">${t('search_min')}</div>`;
+                return;
+            }
+
+            debounceTimer = setTimeout(async () => {
+                grid.innerHTML = '';
+                loading.classList.remove('hidden');
+                try {
+                    const results = await buscarPaises(query);
+                    loading.classList.add('hidden');
+                    
+                    if (results.length === 0) {
+                        grid.innerHTML = `<div class="text-slate-500 col-span-full text-center py-10 italic text-sm">${t('not_found')}</div>`;
+                        return;
+                    }
+                    
+                    grid.innerHTML = results.map(c => createCountryCard(c)).join('');
+                } catch (err) {
+                    loading.classList.add('hidden');
+                    grid.innerHTML = `<div class="text-red-400 col-span-full text-center py-10 text-sm">${t('error_search')}</div>`;
+                }
+            }, 500);
+        });
+        
+        async function filtrarRegion(region) {
+            grid.innerHTML = '';
+            loading.classList.remove('hidden');
+            document.getElementById('section-title').innerText = `${t('paises_en')} ${region}`;
+            try {
+                const res = await fetch(`${API_BASE}/api/region/${region}`);
+                const data = await res.json();
+                loading.classList.add('hidden');
+                grid.innerHTML = data.map(c => createCountryCard(c)).join('');
+            } catch (err) { 
+                loading.classList.add('hidden');
+                console.error(err);
+                grid.innerHTML = `<div class="text-red-400 col-span-full text-center py-10">${t('error_region')}</div>`;
+            }
+        }
+        
+        function irAExplorar() {
+            searchInput.value = '';
+            document.getElementById('section-title').innerText = t('section_title');
+            document.getElementById('section-desc').innerText = t('section_desc');
+            grid.innerHTML = `<div class="text-slate-500 col-span-full text-center py-10 italic text-sm">${t('empty_search')}</div>`;
+        }
+        
+        function cerrarModal() {
+            document.getElementById('modal-detalles').classList.add('hidden');
+            if (countryMap) {
+                countryMap.remove();
+                countryMap = null;
+            }
+        }
+        
+        function cerrarSesion() {
+            document.getElementById('modal-sesion').classList.add('hidden');
+        }
+        
+        function cambiarVista(vista) {
+            const login = document.getElementById('view-login');
+            const registro = document.getElementById('view-registro');
+            if (vista === 'registro') {
+                login.classList.add('hidden');
+                registro.classList.remove('hidden');
+            } else {
+                registro.classList.add('hidden');
+                login.classList.remove('hidden');
+            }
+        }
+        
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('hidden');
+        }
+        
+        document.getElementById('mobileMenuBtn').addEventListener('click', toggleMobileMenu);
+        
+        // Formularios
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            await login(username, password);
+        });
+        
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('registerEmail').value;
+            const username = document.getElementById('registerUsername').value;
+            const password = document.getElementById('registerPassword').value;
+            await register(email, username, password);
+        });
+        
+        // Inicialización
+        if (currentUser) {
+            actualizarBotonSesion();
+        }
+        loading.classList.remove('hidden');
+        Promise.all([
+            cargarListaPaises().then(() => configurarSelector()),
+            cargarPopulares()
+        ]).finally(() => loading.classList.add('hidden'));
+    </script>
+    <div id="toast-container"></div>
+</body>
+</html>

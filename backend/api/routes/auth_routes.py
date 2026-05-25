@@ -1,0 +1,133 @@
+from flask import Blueprint, jsonify, request, g
+from services.auth_service import (
+    register,
+    login,
+    refresh_access_token,
+    logout,
+    get_user_info,
+    get_favorites,
+    add_favorite,
+    remove_favorite
+)
+from services.pais_service import get_country_by_cca3
+from api.middleware.auth import token_required
+from api.middleware.rate_limiter import rate_limit
+
+auth_bp = Blueprint('auth', __name__)
+
+
+@auth_bp.route('/api/register', methods=['POST'])
+@rate_limit(max_requests=5, window_seconds=300)
+def register_route():
+    """Register a new user."""
+    data = request.json or {}
+    username = (data.get('username') or '').strip()
+    email = (data.get('email') or '').strip().lower()
+    password = data.get('password') or ''
+
+    result, error = register(username, email, password)
+    if error:
+        return jsonify({"error": error}), 400
+    return jsonify(result), 201
+
+
+@auth_bp.route('/api/login', methods=['POST'])
+@rate_limit(max_requests=10, window_seconds=60)
+def login_route():
+    """Login and get access + refresh tokens."""
+    data = request.json or {}
+    username = (data.get('username') or '').strip()
+    password = data.get('password') or ''
+
+    result, error = login(username, password)
+    if error:
+        return jsonify({"error": error}), 401
+    return jsonify(result)
+
+
+@auth_bp.route('/api/refresh', methods=['POST'])
+@rate_limit(max_requests=5, window_seconds=60)
+def refresh_route():
+    """Refresh an expired access token using a refresh token."""
+    data = request.json or {}
+    refresh_token = data.get('refresh_token')
+
+    result, error = refresh_access_token(refresh_token)
+    if error:
+        return jsonify({"error": error}), 400
+    return jsonify(result)
+
+
+@auth_bp.route('/api/logout', methods=['POST'])
+@token_required
+def logout_route():
+    """Logout and revoke tokens."""
+    user_id = g.user_id
+    data = request.json
+    refresh_token = data.get('refresh_token')
+    access_token = data.get('access_token')
+
+    result, error = logout(user_id, refresh_token, access_token)
+    if error:
+        return jsonify({"error": error}), 400
+    return jsonify({"message": "Logged out successfully"})
+
+
+@auth_bp.route('/api/me', methods=['GET'])
+@token_required
+def me_route():
+    """Get current authenticated user info."""
+    user_id = g.user_id
+    user = get_user_info(user_id)
+    if user:
+        return jsonify(user)
+    return jsonify({"error": "Usuario no encontrado"}), 404
+
+
+@auth_bp.route('/api/favoritos', methods=['GET', 'POST'])
+@token_required
+def gestionar_favoritos():
+    """List or add favorites for the authenticated user."""
+    user_id = g.user_id
+
+    if request.method == 'POST':
+        try:
+            data = request.json
+            cca3 = data.get('cca3')
+
+            pais = get_country_by_cca3(cca3)
+            if not pais:
+                return jsonify({"error": f"No se encontró el país con código {cca3}"}), 404
+
+            result, error = add_favorite(user_id, cca3)
+            if error:
+                return jsonify({"error": error}), 400
+
+            return jsonify({"status": "success", "message": f"País {pais['name']['common']} guardado en favoritos"}), 201
+
+        except Exception as e:
+            print("ERROR EN POST FAVORITOS:", str(e))
+            return jsonify({"error": str(e)}), 500
+
+    try:
+        cca3_list = get_favorites(user_id)
+        favoritos = []
+        for cca3 in cca3_list:
+            pais = get_country_by_cca3(cca3)
+            if pais:
+                favoritos.append(pais)
+
+        return jsonify(favoritos)
+
+    except Exception as e:
+        print("ERROR EN GET FAVORITOS:", str(e))
+        return jsonify({"error": str(e)}), 500
+
+
+@auth_bp.route('/api/favoritos/<cca3>', methods=['DELETE'])
+@token_required
+def eliminar_favorito(cca3):
+    """Remove a country from favorites."""
+    user_id = g.user_id
+    result, error = remove_favorite(user_id, cca3)
+    return jsonify({"status": "deleted"}), 200
