@@ -7,6 +7,7 @@ from core.config import settings
 _db_initialized = False
 _use_postgres = False
 _pool = None
+_sqlite_fallback_path = None
 
 
 sqlite3.register_adapter(datetime.datetime, lambda val: val.isoformat())
@@ -31,7 +32,7 @@ def _initialize_db():
                 else:
                     conn_url += "?sslmode=require"
 
-            _pool = pool.ThreadedConnectionPool(2, 10, conn_url)
+            _pool = pool.ThreadedConnectionPool(1, 2, conn_url)
             conn = _pool.getconn()
             conn.close()
             _pool.putconn(conn)
@@ -40,6 +41,7 @@ def _initialize_db():
         except Exception as e:
             print(f"ADVERTENCIA: No se pudo conectar a PostgreSQL ({e}). Usando SQLite como fallback.")
             _use_postgres = False
+            _sqlite_fallback_path = "/tmp/geocultural.db"
     else:
         _use_postgres = False
 
@@ -54,7 +56,8 @@ def is_postgres():
 def get_db_connection():
     if _use_postgres and _pool is not None:
         return _pool.getconn()
-    conn = sqlite3.connect(settings.DATABASE_URL)
+    db_path = _sqlite_fallback_path or settings.DATABASE_URL
+    conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=5000")
