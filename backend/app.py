@@ -69,6 +69,11 @@ def index():
     return jsonify({"message": "CountryPedia API - Documentación en /docs"})
 
 
+@app.route('/health')
+def health():
+    return jsonify({"status": "ok", "service": "CountryPedia API"})
+
+
 @app.errorhandler(404)
 def not_found(e):
     return jsonify({"error": "Recurso no encontrado"}), 404

@@ -1,33 +1,47 @@
+# STAGE 1: Frontend Builder — prepara assets estáticos
 # ============================================================
-# STAGE 1: Builder — instala dependencias (incluye build tools)
+FROM node:20-alpine AS frontend-builder
+
+ARG API_BASE_URL=
+
+WORKDIR /frontend
+
+COPY frontend/ .
+
+RUN if [ -z "$API_BASE_URL" ]; then \
+      printf 'window.API_BASE = "";\n' > env-config.js; \
+    else \
+      sed -i "s|__API_BASE__|${API_BASE_URL}|g" env-config.js; \
+    fi
+
 # ============================================================
-FROM python:3.11-slim AS builder
+# STAGE 2: Python Builder — instala dependencias
+# ============================================================
+FROM python:3.11-slim AS python-builder
 
 WORKDIR /build
 
-# Solo copia el archivo de dependencias para aprovechar caché
-COPY requirements.txt .
+COPY backend/requirements.txt .
 
-# Instala en un prefijo separado para copiar solo lo necesario
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 # ============================================================
-# STAGE 2: Runtime — solo librerías necesarias para ejecutar
+# STAGE 3: Runtime — Flask + Nginx
 # ============================================================
-FROM python:3.11-slim AS runtime
+FROM python:3.11-slim
 
-WORKDIR /app
-
-# Solo ca-certificates para requests HTTPS (nada de build-essential, gcc, etc.)
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+RUN apt-get update && apt-get install -y --no-cache-dir nginx ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Copia únicamente los paquetes instalados, no el pip ni setuptools del builder
-COPY --from=builder /install /usr/local
+COPY --from=python-builder /install /usr/local
 
-# Copia el código fuente
-COPY . .
+COPY backend/ /app/backend/
+WORKDIR /app/backend
 
-EXPOSE 5000
+COPY --from=frontend-builder /frontend /usr/share/nginx/html
 
-CMD ["gunicorn", "-w", "4", "--worker-class", "sync", "--timeout", "30", "--keep-alive", "5", "--access-logfile", "-", "--error-logfile", "-", "-b", "0.0.0.0:5000", "app:app"]
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+CMD nginx && gunicorn -w 4 --worker-class sync --timeout 30 --keep-alive 5 -b 0.0.0.0:5000 app:app
