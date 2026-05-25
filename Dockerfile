@@ -45,4 +45,4 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
-CMD rm -f /etc/nginx/sites-enabled/default && nginx && gunicorn -w 4 --worker-class sync --timeout 30 --keep-alive 5 -b 0.0.0.0:5000 app:app
+CMD rm -f /etc/nginx/sites-enabled/default && nginx && gunicorn -w 4 --worker-class sync --timeout 30 --keep-alive 5 -b unix:/tmp/gunicorn.sock app:app
