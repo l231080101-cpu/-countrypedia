@@ -4,21 +4,18 @@ import datetime
 from core.config import settings
 
 
-_db_initialized = False
 _use_postgres = False
 _pool = None
 _sqlite_fallback_path = None
-
+_db_initialized = False
 
 sqlite3.register_adapter(datetime.datetime, lambda val: val.isoformat())
 
 
-def _initialize_db():
-    global _db_initialized, _use_postgres, _pool
+def _ensure_db():
+    global _use_postgres, _pool, _sqlite_fallback_path, _db_initialized
     if _db_initialized:
         return
-
-    _db_initialized = True
 
     if settings.DATABASE_URL and settings.DATABASE_URL.startswith('postgresql'):
         try:
@@ -32,9 +29,8 @@ def _initialize_db():
                 else:
                     conn_url += "?sslmode=require"
 
-            _pool = pool.ThreadedConnectionPool(1, 2, conn_url)
+            _pool = pool.ThreadedConnectionPool(1, 1, conn_url)
             conn = _pool.getconn()
-            conn.close()
             _pool.putconn(conn)
             _use_postgres = True
             print("Conexion exitosa a PostgreSQL/Supabase (pool activo)")
@@ -45,15 +41,16 @@ def _initialize_db():
     else:
         _use_postgres = False
 
-
-_initialize_db()
+    _db_initialized = True
 
 
 def is_postgres():
+    _ensure_db()
     return _use_postgres
 
 
 def get_db_connection():
+    _ensure_db()
     if _use_postgres and _pool is not None:
         return _pool.getconn()
     db_path = _sqlite_fallback_path or settings.DATABASE_URL
@@ -72,6 +69,7 @@ def close_db_connection(conn):
 
 
 def init_db():
+    _ensure_db()
     conn = get_db_connection()
     cursor = conn.cursor()
     pg = is_postgres()

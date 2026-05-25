@@ -79,8 +79,12 @@ def not_found(e):
     return jsonify({"error": "Recurso no encontrado"}), 404
 
 
-with app.app_context():
-    init_db()
+@app.before_request
+def _ensure_db_init():
+    if not getattr(app, '_db_ready', False):
+        with app.app_context():
+            init_db()
+            app._db_ready = True
 
 if not os.getenv('DONT_CLEANUP_TOKENS'):
     def _cleanup_loop():
