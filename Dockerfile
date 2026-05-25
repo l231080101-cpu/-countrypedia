@@ -31,7 +31,8 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 FROM python:3.11-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends nginx ca-certificates \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    && apt-get clean && rm -rf /var/lib/apt/lists/* \
+    && rm -f /etc/nginx/conf.d/default.conf /etc/nginx/sites-enabled/default
 
 COPY --from=python-builder /install /usr/local
 
@@ -44,4 +45,4 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
-CMD nginx && gunicorn -w 4 --worker-class sync --timeout 30 --keep-alive 5 -b 0.0.0.0:5000 app:app
+CMD rm -f /etc/nginx/sites-enabled/default && nginx && gunicorn -w 4 --worker-class sync --timeout 30 --keep-alive 5 -b 0.0.0.0:5000 app:app
