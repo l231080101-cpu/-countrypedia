@@ -30,8 +30,8 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 # ============================================================
 FROM python:3.11-slim
 
-RUN apt-get update && apt-get install -y --no-cache-dir nginx ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends nginx ca-certificates \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY --from=python-builder /install /usr/local
 
